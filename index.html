@@ -65,6 +65,47 @@
     margin-top: 10px;
     font-weight: bold;
 }
+#cropOverlay {
+    position: absolute;
+    border: 2px dashed blue;
+    background: rgba(0, 0, 255, 0.1);
+    pointer-events: auto; /* Cho phép tương tác với handle */
+    display: none;
+}
+
+.resize-handle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: rgba(0, 0, 255, 0.8);
+    border: 1px solid white;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.resize-handle.top-left {
+    top: -8px;
+    left: -8px;
+    cursor: nwse-resize;
+}
+
+.resize-handle.top-right {
+    top: -8px;
+    right: -8px;
+    cursor: nesw-resize;
+}
+
+.resize-handle.bottom-left {
+    bottom: -8px;
+    left: -8px;
+    cursor: nesw-resize;
+}
+
+.resize-handle.bottom-right {
+    bottom: -8px;
+    right: -8px;
+    cursor: nwse-resize;
+}
     </style>
 </head>
 <body>
@@ -140,16 +181,22 @@
             <button onclick="cropImage()">Cắt</button>
         </div>
     </div>
-    <div id="imageContainer">
-        <img id="displayImage" style="display: none;">
-        <canvas id="gridCanvas"></canvas>
-        <div id="cursorOverlay"></div>
-        <div id="cropOverlay"></div>
-        <div id="selectOverlay"></div>
+   <div id="imageContainer">
+    <img id="displayImage" style="display: none;">
+    <canvas id="gridCanvas"></canvas>
+    <div id="cursorOverlay"></div>
+    <div id="cropOverlay">
+        <div class="resize-handle top-left"></div>
+        <div class="resize-handle top-right"></div>
+        <div class="resize-handle bottom-left"></div>
+        <div class="resize-handle bottom-right"></div>
     </div>
+    <div id="selectOverlay"></div>
+</div>
     <div id="result">Tổng diện tích: 0 cm² ( 0 ô) - Tổng tiền: $0</div>
-   <div id="resultVND"></div>
-   <div id="resultEUR"></div>
+<div id="resultVND"></div>
+<div id="resultEUR"></div>
+<div id="exchangeRate"></div>
 <br>
 <button onclick="checkPrice()">Kiểm tra giá</button>
 
@@ -622,10 +669,11 @@ function formatVND(number) {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// Hàm quy đổi và hiển thị giá VND, EUR
+// Hàm quy đổi và hiển thị giá VND, EUR, và tỷ giá
 function updateCurrencyConversion(totalPriceUSD) {
     const resultVND = document.getElementById('resultVND');
     const resultEUR = document.getElementById('resultEUR');
+    const exchangeRate = document.getElementById('exchangeRate');
     
     const apiKey = '191baef5cd8aa60cc8540e3e'; // Thay bằng API key của bạn
     const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
@@ -640,18 +688,20 @@ function updateCurrencyConversion(totalPriceUSD) {
                 const totalPriceEUR = (totalPriceUSD * eurRate).toFixed(2);
                 resultVND.textContent = `Tổng tiền (VND): ${formatVND(totalPriceVND)} VND`;
                 resultEUR.textContent = `Tổng tiền (EUR): €${totalPriceEUR}`;
+                exchangeRate.textContent = `Tỷ giá: 1 USD = ${formatVND(vndRate.toFixed(0))} VND | 1 EUR = ${formatVND((vndRate / eurRate).toFixed(0))} VND`;
             } else {
                 resultVND.textContent = `Tổng tiền (VND): Lỗi lấy tỉ giá`;
                 resultEUR.textContent = `Tổng tiền (EUR): Lỗi lấy tỉ giá`;
+                exchangeRate.textContent = `Tỷ giá: Lỗi lấy tỉ giá`;
             }
         })
         .catch(error => {
             console.error('Lỗi khi lấy tỉ giá:', error);
             resultVND.textContent = `Tổng tiền (VND): Lỗi lấy tỉ giá`;
             resultEUR.textContent = `Tổng tiền (EUR): Lỗi lấy tỉ giá`;
+            exchangeRate.textContent = `Tỷ giá: Lỗi lấy tỉ giá`;
         });
 }
-
        function updateResult() {
     const cellSize = parseInt(cellSizeInput.value);
     const sochia = cellSize * cellSize;
@@ -670,7 +720,224 @@ function checkPrice() {
     const totalPriceUSD = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
     updateCurrencyConversion(totalPriceUSD);
 }
-        pricePerCellInput.addEventListener('input', updateResult);
+
+pricePerCellInput.addEventListener('input', updateResult);
+
+// Hàm xử lý vị trí từ sự kiện chuột hoặc cảm ứng
+function getPositionFromEvent(e) {
+    const containerRect = imageContainer.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.type.startsWith('touch')) {
+        clientX = e.touches[0]?.clientX || e.changedTouches[0].clientX;
+        clientY = e.touches[0]?.clientY || e.changedTouches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    return {
+        x: Math.max(0, clientX - containerRect.left),
+        y: Math.max(0, clientY - containerRect.top)
+    };
+}
+
+// Biến để theo dõi trạng thái kéo handle
+let isResizing = false;
+let resizeHandle = null; // Lưu handle đang được kéo (top-left, v.v.)
+
+// Bắt đầu chọn hoặc cắt
+function handleStart(e) {
+    e.preventDefault();
+    if (!displayImage.src || displayImage.style.display === 'none') return;
+
+    const pos = getPositionFromEvent(e);
+    const target = e.target;
+
+    // Kiểm tra nếu click vào handle
+    if (isCropping && target.classList.contains('resize-handle') && cropData) {
+        isResizing = true;
+        resizeHandle = target.className.split(' ')[1]; // Lấy tên handle (top-left, v.v.)
+        return;
+    }
+
+    // Xử lý kéo vùng cắt mới hoặc chọn/xóa ô
+    if (isCropping && !isSelecting && !isResizing) {
+        isSelecting = true;
+        startX = pos.x;
+        startY = pos.y;
+        cropOverlay.style.display = 'block';
+        cropOverlay.style.left = `${startX}px`;
+        cropOverlay.style.top = `${startY}px`;
+        cropOverlay.style.width = '0px';
+        cropOverlay.style.height = '0px';
+        cropData = { startX, startY, width: 0, height: 0 };
+    } else if (!isCropping && isDragging && !isSelecting) {
+        isSelecting = true;
+        startX = pos.x;
+        startY = pos.y;
+        selectOverlay.style.display = 'block';
+        selectOverlay.style.left = `${startX}px`;
+        selectOverlay.style.top = `${startY}px`;
+        selectOverlay.style.width = '0px';
+        selectOverlay.style.height = '0px';
+        selectData = { startX, startY, width: 0, height: 0 };
+    } else if (!isCropping && !isDragging) {
+        isSelecting = true; // Luôn bật isSelecting để hỗ trợ kéo liên tục
+        const { widthCells, heightCells } = getCellCounts();
+        const containerRect = imageContainer.getBoundingClientRect();
+        const cellWidth = containerRect.width / widthCells;
+        const cellHeight = containerRect.height / heightCells;
+        const col = Math.floor(pos.x / cellWidth);
+        const row = Math.floor(pos.y / cellHeight);
+        if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
+            applyAreaSelection(row, col);
+            updateCursorOverlay(pos, row, col);
+            cursorOverlay.style.display = 'block';
+        }
+    }
+}
+
+// Di chuyển khi kéo
+function handleMove(e) {
+    e.preventDefault();
+    if (!displayImage.src || displayImage.style.display === 'none') return;
+
+    const pos = getPositionFromEvent(e);
+    const containerRect = imageContainer.getBoundingClientRect();
+    const endX = Math.min(Math.max(pos.x, 0), containerRect.width);
+    const endY = Math.min(Math.max(pos.y, 0), containerRect.height);
+
+    if (isCropping && isResizing && cropData) {
+        let { startX, startY, width, height } = cropData;
+        switch (resizeHandle) {
+            case 'top-left':
+                width = cropData.startX + cropData.width - endX;
+                height = cropData.startY + cropData.height - endY;
+                startX = endX;
+                startY = endY;
+                break;
+            case 'top-right':
+                width = endX - cropData.startX;
+                height = cropData.startY + cropData.height - endY;
+                startY = endY;
+                break;
+            case 'bottom-left':
+                width = cropData.startX + cropData.width - endX;
+                height = endY - cropData.startY;
+                startX = endX;
+                break;
+            case 'bottom-right':
+                width = endX - cropData.startX;
+                height = endY - cropData.startY;
+                break;
+        }
+        if (width < 0) {
+            startX += width;
+            width = -width;
+        }
+        if (height < 0) {
+            startY += height;
+            height = -height;
+        }
+        cropOverlay.style.left = `${startX}px`;
+        cropOverlay.style.top = `${startY}px`;
+        cropOverlay.style.width = `${width}px`;
+        cropOverlay.style.height = `${height}px`;
+        cropData = { startX, startY, width, height };
+    } else if (isCropping && isSelecting) {
+        const left = Math.min(startX, endX);
+        const top = Math.min(startY, endY);
+        const width = Math.abs(endX - startX);
+        const height = Math.abs(endY - startY);
+
+        cropOverlay.style.left = `${left}px`;
+        cropOverlay.style.top = `${top}px`;
+        cropOverlay.style.width = `${width}px`;
+        cropOverlay.style.height = `${height}px`;
+
+        cropData = { startX: left, startY: top, width, height };
+    } else if (!isCropping && isDragging && isSelecting) {
+        const left = Math.min(startX, endX);
+        const top = Math.min(startY, endY);
+        const width = Math.abs(endX - startX);
+        const height = Math.abs(endY - startY);
+
+        selectOverlay.style.left = `${left}px`;
+        selectOverlay.style.top = `${top}px`;
+        selectOverlay.style.width = `${width}px`;
+        selectOverlay.style.height = `${height}px`;
+
+        selectData = { startX: left, startY: top, width, height };
+    } else if (!isCropping && !isDragging && isSelecting) {
+        const { widthCells, heightCells } = getCellCounts();
+        const containerRect = imageContainer.getBoundingClientRect();
+        const cellWidth = containerRect.width / widthCells;
+        const cellHeight = containerRect.height / heightCells;
+        const col = Math.floor(pos.x / cellWidth);
+        const row = Math.floor(pos.y / cellHeight);
+        if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
+            applyAreaSelection(row, col); // Áp dụng chọn/xóa liên tục khi kéo
+            updateCursorOverlay(pos, row, col);
+            cursorOverlay.style.display = 'block';
+        }
+    }
+}
+
+// Kết thúc kéo
+function handleEnd(e) {
+    if (isCropping && (isSelecting || isResizing)) {
+        isSelecting = false;
+        isResizing = false;
+        resizeHandle = null;
+        if (cropData && cropData.width > 0 && cropData.height > 0) {
+            // Giữ cropOverlay hiển thị để điều chỉnh tiếp
+        } else {
+            cropOverlay.style.display = 'none';
+            cropData = null;
+        }
+    } else if (!isCropping && isDragging && isSelecting) {
+        isSelecting = false;
+        selectOverlay.style.display = 'none';
+        applyDragSelection();
+    } else if (!isCropping && !isDragging && isSelecting) {
+        isSelecting = false; // Kết thúc chọn liên tục
+        cursorOverlay.style.display = 'none';
+    }
+}
+
+// Thay thế các sự kiện cũ
+imageContainer.removeEventListener('mousedown', handleStart);
+imageContainer.removeEventListener('mousemove', handleMove);
+imageContainer.removeEventListener('mouseup', handleEnd);
+imageContainer.removeEventListener('touchstart', handleStart);
+imageContainer.removeEventListener('touchmove', handleMove);
+imageContainer.removeEventListener('touchend', handleEnd);
+
+// Thêm sự kiện chuột và cảm ứng
+imageContainer.addEventListener('mousedown', handleStart);
+imageContainer.addEventListener('mousemove', handleMove);
+imageContainer.addEventListener('mouseup', handleEnd);
+imageContainer.addEventListener('touchstart', handleStart, { passive: false });
+imageContainer.addEventListener('touchmove', handleMove, { passive: false });
+imageContainer.addEventListener('touchend', handleEnd, { passive: false });
+
+// Cập nhật cursorOverlay
+function updateCursorOverlay(pos, row, col) {
+    const size = parseInt(selectionAreaSize.value);
+    const { widthCells, heightCells } = getCellCounts();
+    const containerRect = imageContainer.getBoundingClientRect();
+    const cellWidth = containerRect.width / widthCells;
+    const cellHeight = containerRect.height / heightCells;
+
+    const overlayWidth = Math.min(size, widthCells - col) * cellWidth;
+    const overlayHeight = Math.min(size, heightCells - row) * cellHeight;
+    const left = col * cellWidth;
+    const top = row * cellHeight;
+
+    cursorOverlay.style.width = `${overlayWidth}px`;
+    cursorOverlay.style.height = `${overlayHeight}px`;
+    cursorOverlay.style.left = `${left}px`;
+    cursorOverlay.style.top = `${top}px`;
+}
     </script>
 </body>
 </html>
