@@ -111,6 +111,33 @@
   max-width: 400px;
   margin-top: 5px;
 }
+.resize-handle.top {
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: ns-resize;
+}
+
+.resize-handle.right {
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: ew-resize;
+}
+
+.resize-handle.bottom {
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: ns-resize;
+}
+
+.resize-handle.left {
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: ew-resize;
+}
     </style>
 </head>
 <body>
@@ -127,9 +154,14 @@
         </div>
         <br>
         <div>
-            <label>Giá mỗi cm² (USD): </label>
-            <input type="number" id="pricePerCell" min="0" step="0.01" value="1">
-        </div>
+    <label>Chế độ giá: </label>
+    <label><input type="radio" name="priceMode" value="auto" checked> Tự động</label>
+    <label><input type="radio" name="priceMode" value="manual"> Thủ công</label>
+</div>
+<div id="manualPriceInput">
+    <label>Price per cm² (USD): </label>
+    <input type="number" id="pricePerCell" min="0" step="0.01" value="1">
+</div>
          <br>
         <div style="font-style: italic; font-size: 14px; color: grey;">
     1->25=0.8-1 | 26->100=0.6-0.8 | 101->199=0.5-0.7
@@ -139,14 +171,13 @@
 </div>
 <div id="zoomContainer">
     <label>Thu phóng ảnh:</label><br>
-    <input type="range" id="zoomSlider" min="0.5" max="3" step="0.1" value="1">
+    <input type="range" id="zoomSlider" min="0.5" max="2" step="0.1" value="1">
 </div>
 <div>
 <br>
             <label>Kích thước ô (cm²): </label>
             <select id="cellSize">
-                <option value="1" selected>1x1</option>
-                <option value="2">2x2</option>
+                <option value="2" selected>2x2</option>
                 <option value="3">3x3</option>
                 <option value="4">4x4</option>
                 <option value="5">5x5</option>
@@ -160,21 +191,21 @@
         <div id="areaSize">
             <label>Kích thước vùng chọn: </label>
             <select id="selectionAreaSize">
-                <option value="1">1x1</option>
-                <option value="2" selected>2x2</option>
-                <option value="3">3x3</option>
-                <option value="4">4x4</option>
-                <option value="5">5x5</option>
-                <option value="6">6x6</option>
-                <option value="7">7x7</option>
-                <option value="8">8x8</option>
-                <option value="9">9x9</option>
-                <option value="10">10x10</option>
-                <option value="11">11x11</option>
-                <option value="12">12x12</option>
-                <option value="13">13x13</option>
-                <option value="14">14x14</option>
-                <option value="15">15x15</option>
+                <option value="1">1</option>
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
             </select>
         </div>
         <div id="selectionMode">
@@ -204,80 +235,115 @@
         <div class="resize-handle top-right"></div>
         <div class="resize-handle bottom-left"></div>
         <div class="resize-handle bottom-right"></div>
+    <div class="resize-handle top-left"></div>
+    <div class="resize-handle top-right"></div>
+    <div class="resize-handle bottom-left"></div>
+    <div class="resize-handle bottom-right"></div>
+    <div class="resize-handle top"></div>
+    <div class="resize-handle right"></div>
+    <div class="resize-handle bottom"></div>
+    <div class="resize-handle left"></div>
     </div>
     <div id="selectOverlay"></div>
 </div>
-    <div id="result">Tổng diện tích: 0 cm² ( 0 ô) - Tổng tiền: $0</div>
+<div id="totalArea" style="font-weight: bold;">Total area: 0 cm² (0 cells)</div>
+<div id="pricePerCm2" style="margin-top: 10px; font-weight: bold;"></div>
 <div id="resultVND"></div>
+<div id="totalPrice" style="font-weight: bold;">Total amount (USD): $0</div>
 <div id="resultEUR"></div>
 <div id="exchangeRate"></div>
 <br>
-<button onclick="checkPrice()">Kiểm tra giá</button>
+<button onclick="checkPrice()">Check Price</button>
 
     <script>
-        const imageInput = document.getElementById('imageInput');
-        const displayImage = document.getElementById('displayImage');
-        const gridCanvas = document.getElementById('gridCanvas');
-        const cursorOverlay = document.getElementById('cursorOverlay');
-        const cropOverlay = document.getElementById('cropOverlay');
-        const selectOverlay = document.getElementById('selectOverlay');
-        const pricePerCellInput = document.getElementById('pricePerCell');
-        const widthMmInput = document.getElementById('widthMm');
-        const heightMmInput = document.getElementById('heightMm');
-        const cellSizeInput = document.getElementById('cellSize');
-        const zoomSlider = document.getElementById('zoomSlider');
-        const imageInfo = document.getElementById('imageInfo');
-        const result = document.getElementById('result');
-        const selectionAreaSize = document.getElementById('selectionAreaSize');
-        const selectionModeInputs = document.getElementsByName('mode');
-        const selectMethodInputs = document.getElementsByName('selectMethod');
-        const cropModeDiv = document.getElementById('cropMode');
-        const imageContainer = document.getElementById('imageContainer');
-        let selectedCells = 0;
-        let selectedCellIndices = [];
-        let isSelecting = false;
-        let isCropping = false;
-        let isDragging = false;
-        let startX, startY;
-        let originalWidthPx, originalHeightPx, aspectRatio;
-        let cropData = null;
-        let selectData = null;
-        const ctx = gridCanvas.getContext('2d');
+const imageInput = document.getElementById('imageInput');
+const displayImage = document.getElementById('displayImage');
+const gridCanvas = document.getElementById('gridCanvas');
+const cursorOverlay = document.getElementById('cursorOverlay');
+const cropOverlay = document.getElementById('cropOverlay');
+const selectOverlay = document.getElementById('selectOverlay');
+const pricePerCellInput = document.getElementById('pricePerCell');
+const widthMmInput = document.getElementById('widthMm');
+const heightMmInput = document.getElementById('heightMm');
+const cellSizeInput = document.getElementById('cellSize');
+const zoomSlider = document.getElementById('zoomSlider');
+const imageInfo = document.getElementById('imageInfo');
+const result = document.getElementById('result');
+const selectionAreaSize = document.getElementById('selectionAreaSize');
+const selectionModeInputs = document.getElementsByName('mode');
+const selectMethodInputs = document.getElementsByName('selectMethod');
+const cropModeDiv = document.getElementById('cropMode');
+const imageContainer = document.getElementById('imageContainer');
+let selectedCells = 0;
+let selectedCellIndices = [];
+let isSelecting = false;
+let isCropping = false;
+let isDragging = false;
+let isResizing = false;
+let resizeHandle = null;
+let startX, startY;
+let originalWidthPx, originalHeightPx, aspectRatio;
+let cropData = null;
+let selectData = null;
+const ctx = gridCanvas.getContext('2d');
 
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    displayImage.src = e.target.result;
-                    displayImage.style.display = 'block';
-                    cropData = null;
-                    selectData = null;
-                    isSelecting = false;
-                    isCropping = false;
-                    isDragging = false;
-                    cropOverlay.style.display = 'none';
-                    selectOverlay.style.display = 'none';
-                    cursorOverlay.style.display = 'none';
-                    cropModeDiv.style.display = 'none';
-                    selectionModeInputs[0].checked = true;
-                    selectMethodInputs[0].checked = true;
-                    selectedCells = 0;
-                    selectedCellIndices = [];
-                    displayImage.onload = function() {
-                        originalWidthPx = displayImage.naturalWidth;
-                        originalHeightPx = displayImage.naturalHeight;
-                        aspectRatio = originalWidthPx / originalHeightPx;
-                        imageInfo.textContent = `Kích thước ảnh: ${Math.round(originalWidthPx)}px x ${Math.round(originalHeightPx)}px`;
-                        updateDimensions();
-                        ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-                    };
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+const priceModeInputs = document.getElementsByName('priceMode');
+const manualPriceInput = document.getElementById('manualPriceInput');
 
-        widthMmInput.addEventListener('change', function() {
+priceModeInputs.forEach(input => {
+    input.addEventListener('change', function() {
+        manualPriceInput.style.display = input.value === 'manual' ? 'block' : 'none';
+        updateResult();
+    });
+});
+
+function getPricePerCm2(totalAreaCm2) {
+    if (totalAreaCm2 <= 6) return 2.5;
+    if (totalAreaCm2 <= 16) return 2.2;
+    if (totalAreaCm2 <= 25) return 2.0;
+    if (totalAreaCm2 <= 36) return 1.8;
+    if (totalAreaCm2 <= 49) return 1.6;
+    if (totalAreaCm2 <= 64) return 1.4;
+    if (totalAreaCm2 <= 81) return 1.2;
+    if (totalAreaCm2 <= 100) return 1.0;
+    return 0.8;
+}
+
+imageInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            displayImage.src = e.target.result;
+            displayImage.style.display = 'block';
+            cropData = null;
+            selectData = null;
+            isSelecting = false;
+            isCropping = false;
+            isDragging = false;
+            isResizing = false;
+            cropOverlay.style.display = 'none';
+            selectOverlay.style.display = 'none';
+            cursorOverlay.style.display = 'none';
+            cropModeDiv.style.display = 'none';
+            selectionModeInputs[0].checked = true;
+            selectMethodInputs[0].checked = true;
+            selectedCells = 0;
+            selectedCellIndices = [];
+            displayImage.onload = function() {
+                originalWidthPx = displayImage.naturalWidth;
+                originalHeightPx = displayImage.naturalHeight;
+                aspectRatio = originalWidthPx / originalHeightPx;
+                imageInfo.textContent = `Kích thước ảnh: ${Math.round(originalWidthPx)}px x ${Math.round(originalHeightPx)}px`;
+                updateDimensions();
+                ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+widthMmInput.addEventListener('change', function() {
     if (widthMmInput.value && aspectRatio) {
         heightMmInput.value = (widthMmInput.value / aspectRatio).toFixed(2);
     }
@@ -291,453 +357,187 @@ heightMmInput.addEventListener('change', function() {
     updateDimensions();
 });
 
-        cellSizeInput.addEventListener('change', function() {
-            createGrid();
-        });
+cellSizeInput.addEventListener('change', function() {
+    createGrid();
+    updateResult();
+});
 
-        zoomSlider.addEventListener('input', updateDimensions);
+selectionAreaSize.addEventListener('change', function() {
+    updateResult();
+});
 
-        selectionModeInputs.forEach(input => {
+zoomSlider.addEventListener('input', updateDimensions);
+
+selectionModeInputs.forEach(input => {
     input.addEventListener('change', function() {
         isSelecting = false;
+        isResizing = false;
         isCropping = input.value === 'crop';
         cursorOverlay.style.display = 'none';
-        cropOverlay.style.display = 'none';
         selectOverlay.style.display = 'none';
         cropModeDiv.style.display = isCropping ? 'block' : 'none';
         document.getElementById('selectMethodOptions').style.display = isCropping ? 'none' : 'block';
+        
+        if (isCropping && displayImage.src && displayImage.style.display !== 'none') {
+            const containerRect = imageContainer.getBoundingClientRect();
+            cropOverlay.style.display = 'block';
+            cropOverlay.style.left = '0px';
+            cropOverlay.style.top = '0px';
+            cropOverlay.style.width = `${containerRect.width}px`;
+            cropOverlay.style.height = `${containerRect.height}px`;
+            cropData = { 
+                startX: 0, 
+                startY: 0, 
+                width: containerRect.width, 
+                height: containerRect.height 
+            };
+        } else {
+            cropOverlay.style.display = 'none';
+            cropData = null;
+        }
+        
         if (!isCropping) {
             createGrid();
         }
     });
 });
 
-        selectMethodInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                isSelecting = false;
-                isDragging = input.value === 'drag';
-                cursorOverlay.style.display = 'none';
-                selectOverlay.style.display = 'none';
-            });
-        });
+selectMethodInputs.forEach(input => {
+    input.addEventListener('change', function() {
+        isSelecting = false;
+        isDragging = input.value === 'drag';
+        cursorOverlay.style.display = 'none';
+        selectOverlay.style.display = 'none';
+    });
+});
 
-        function getCellCounts() {
-            const widthMm = parseFloat(widthMmInput.value) || 0;
-            const heightMm = parseFloat(heightMmInput.value) || 0;
-            const cellSize = parseInt(cellSizeInput.value);
-            // Tính số ô cơ bản (chia cho 10, làm tròn), rồi nhân với cellSize
-            const baseWidthCells = Math.round(widthMm / 10);
-            const baseHeightCells = Math.round(heightMm / 10);
-            const widthCells = baseWidthCells * cellSize;
-            const heightCells = baseHeightCells * cellSize;
-            return { widthCells: Math.max(1, widthCells), heightCells: Math.max(1, heightCells) };
-        }
-
-        function updateDimensions() {
-            const zoom = parseFloat(zoomSlider.value);
-            let widthPx, heightPx;
-
-            if (!originalWidthPx || !originalHeightPx || isNaN(originalWidthPx) || isNaN(originalHeightPx)) {
-                return;
-            }
-
-            if (widthMmInput.value && aspectRatio) {
-                const widthMm = parseFloat(widthMmInput.value);
-                const heightMm = widthMm / aspectRatio;
-                heightMmInput.value = heightMm.toFixed(2);
-                widthPx = widthMm * 3.779527559 * zoom;
-                heightPx = heightMm * 3.779527559 * zoom;
-            } else if (heightMmInput.value && aspectRatio) {
-                const heightMm = parseFloat(heightMmInput.value);
-                const widthMm = heightMm * aspectRatio;
-                widthMmInput.value = widthMm.toFixed(2);
-                widthPx = widthMm * 3.779527559 * zoom;
-                heightPx = heightMm * 3.779527559 * zoom;
-            } else {
-                widthPx = originalWidthPx * zoom;
-                heightPx = originalHeightPx * zoom;
-                widthMmInput.value = (widthPx / 3.779527559).toFixed(2);
-                heightMmInput.value = (heightPx / 3.779527559).toFixed(2);
-            }
-
-            displayImage.style.width = `${widthPx}px`;
-            displayImage.style.height = `${heightPx}px`;
-            gridCanvas.width = widthPx;
-            gridCanvas.height = heightPx;
-
-            if (!isCropping) {
-                createGrid();
-            }
-        }
-
-        function createGrid() {
-            const { widthCells, heightCells } = getCellCounts();
-            if (!widthCells || !heightCells || widthCells < 1 || heightCells < 1) {
-                alert('Vui lòng nhập kích thước ảnh hợp lệ!');
-                return;
-            }
-            if (!displayImage.src || displayImage.style.display === 'none') {
-                alert('Vui lòng tải ảnh trước!');
-                return;
-            }
-
-            // Xóa các ô chọn ngoài phạm vi lưới mới
-            selectedCellIndices = selectedCellIndices.filter(([row, col]) => row < heightCells && col < widthCells);
-            selectedCells = selectedCellIndices.length;
-
-            const cellWidth = gridCanvas.width / widthCells;
-            const cellHeight = gridCanvas.height / heightCells;
-
-            ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-
-            // Vẽ lưới
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i <= widthCells; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * cellWidth, 0);
-                ctx.lineTo(i * cellWidth, gridCanvas.height);
-                ctx.stroke();
-            }
-            for (let i = 0; i <= heightCells; i++) {
-                ctx.beginPath();
-                ctx.moveTo(0, i * cellHeight);
-                ctx.lineTo(gridCanvas.width, i * cellHeight);
-                ctx.stroke();
-            }
-
-            // Vẽ các ô đã chọn
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-            selectedCellIndices.forEach(([row, col]) => {
-                ctx.fillRect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
-            });
-
-            updateResult();
-        }
-
-        imageContainer.addEventListener('mousedown', function(e) {
-            if (!displayImage.src || displayImage.style.display === 'none') return;
-
-            e.preventDefault();
-            if (isCropping && !isSelecting) {
-                isSelecting = true;
-                const containerRect = imageContainer.getBoundingClientRect();
-                startX = Math.max(0, e.clientX - containerRect.left);
-                startY = Math.max(0, e.clientY - containerRect.top);
-                cropOverlay.style.display = 'block';
-                cropOverlay.style.left = `${startX}px`;
-                cropOverlay.style.top = `${startY}px`;
-                cropOverlay.style.width = '0px';
-                cropOverlay.style.height = '0px';
-                cropData = { startX: startX, startY: startY, width: 0, height: 0 };
-            } else if (!isCropping && isDragging && !isSelecting) {
-                isSelecting = true;
-                const containerRect = imageContainer.getBoundingClientRect();
-                startX = Math.max(0, e.clientX - containerRect.left);
-                startY = Math.max(0, e.clientY - containerRect.top);
-                selectOverlay.style.display = 'block';
-                selectOverlay.style.left = `${startX}px`;
-                selectOverlay.style.top = `${startY}px`;
-                selectOverlay.style.width = '0px';
-                selectOverlay.style.height = '0px';
-                selectData = { startX: startX, startY: startY, width: 0, height: 0 };
-            } else if (!isCropping && !isDragging) {
-                isSelecting = !isSelecting;
-                const { widthCells, heightCells } = getCellCounts();
-                const containerRect = imageContainer.getBoundingClientRect();
-                const cellWidth = containerRect.width / widthCells;
-                const cellHeight = containerRect.height / heightCells;
-                const col = Math.floor((e.clientX - containerRect.left) / cellWidth);
-                const row = Math.floor((e.clientY - containerRect.top) / cellHeight);
-                if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
-                    if (isSelecting) {
-                        applyAreaSelection(row, col);
-                        updateCursorOverlay(e, row, col);
-                        cursorOverlay.style.display = 'block';
-                    } else {
-                        cursorOverlay.style.display = 'none';
-                    }
-                }
-            }
-        });
-
-        imageContainer.addEventListener('mousemove', function(e) {
-            if (!displayImage.src || displayImage.style.display === 'none') return;
-
-            if (isCropping && isSelecting) {
-                const containerRect = imageContainer.getBoundingClientRect();
-                const endX = Math.min(Math.max(e.clientX, containerRect.left), containerRect.right) - containerRect.left;
-                const endY = Math.min(Math.max(e.clientY, containerRect.top), containerRect.bottom) - containerRect.top;
-
-                const left = Math.min(startX, endX);
-                const top = Math.min(startY, endY);
-                const width = Math.abs(endX - startX);
-                const height = Math.abs(endY - startY);
-
-                cropOverlay.style.left = `${left}px`;
-                cropOverlay.style.top = `${top}px`;
-                cropOverlay.style.width = `${width}px`;
-                cropOverlay.style.height = `${height}px`;
-
-                cropData = { startX: left, startY: top, width: width, height: height };
-            } else if (!isCropping && isDragging && isSelecting) {
-                const containerRect = imageContainer.getBoundingClientRect();
-                const endX = Math.min(Math.max(e.clientX, containerRect.left), containerRect.right) - containerRect.left;
-                const endY = Math.min(Math.max(e.clientY, containerRect.top), containerRect.bottom) - containerRect.top;
-
-                const left = Math.min(startX, endX);
-                const top = Math.min(startY, endY);
-                const width = Math.abs(endX - startX);
-                const height = Math.abs(endY - startY);
-
-                selectOverlay.style.left = `${left}px`;
-                selectOverlay.style.top = `${top}px`;
-                selectOverlay.style.width = `${width}px`;
-                selectOverlay.style.height = `${height}px`;
-
-                selectData = { startX: left, startY: top, width: width, height: height };
-            } else if (!isCropping && !isDragging && isSelecting) {
-                const { widthCells, heightCells } = getCellCounts();
-                const containerRect = imageContainer.getBoundingClientRect();
-                const cellWidth = containerRect.width / widthCells;
-                const cellHeight = containerRect.height / heightCells;
-                const col = Math.floor((e.clientX - containerRect.left) / cellWidth);
-                const row = Math.floor((e.clientY - containerRect.top) / cellHeight);
-                if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
-                    applyAreaSelection(row, col);
-                    updateCursorOverlay(e, row, col);
-                    cursorOverlay.style.display = 'block';
-                }
-            }
-        });
-
-        imageContainer.addEventListener('mouseup', function() {
-            if (isCropping && isSelecting) {
-                isSelecting = false;
-            } else if (!isCropping && isDragging && isSelecting) {
-                isSelecting = false;
-                selectOverlay.style.display = 'none';
-                applyDragSelection();
-            }
-        });
-
-        imageContainer.addEventListener('mouseleave', function() {
-            cursorOverlay.style.display = 'none';
-        });
-
-        imageContainer.addEventListener('mouseenter', function(e) {
-            if (isSelecting && !isCropping && !isDragging) {
-                const { widthCells, heightCells } = getCellCounts();
-                const containerRect = imageContainer.getBoundingClientRect();
-                const cellWidth = containerRect.width / widthCells;
-                const cellHeight = containerRect.height / heightCells;
-                const col = Math.floor((e.clientX - containerRect.left) / cellWidth);
-                const row = Math.floor((e.clientY - containerRect.top) / cellHeight);
-                if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
-                    updateCursorOverlay(e, row, col);
-                    cursorOverlay.style.display = 'block';
-                }
-            }
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && isCropping && cropData) {
-                isSelecting = false;
-                cropOverlay.style.display = 'none';
-                cropImage();
-            } else if (e.key === 'Enter' && !isCropping && isDragging && selectData) {
-                isSelecting = false;
-                selectOverlay.style.display = 'none';
-                applyDragSelection();
-            }
-        });
-
-        function updateCursorOverlay(e, row, col) {
-            const size = parseInt(selectionAreaSize.value);
-            const { widthCells, heightCells } = getCellCounts();
-            const containerRect = imageContainer.getBoundingClientRect();
-            const cellWidth = containerRect.width / widthCells;
-            const cellHeight = containerRect.height / heightCells;
-
-            const overlayWidth = Math.min(size, widthCells - col) * cellWidth;
-            const overlayHeight = Math.min(size, heightCells - row) * cellHeight;
-            const left = col * cellWidth;
-            const top = row * cellHeight;
-
-            cursorOverlay.style.width = `${overlayWidth}px`;
-            cursorOverlay.style.height = `${overlayHeight}px`;
-            cursorOverlay.style.left = `${left}px`;
-            cursorOverlay.style.top = `${top}px`;
-        }
-
-        function cropImage() {
-            if (!isCropping || !cropData) {
-                alert('Vui lòng chọn vùng cắt trước!');
-                return;
-            }
-
-            const containerRect = imageContainer.getBoundingClientRect();
-            const zoom = parseFloat(zoomSlider.value);
-            const currentWidthPx = parseFloat(displayImage.style.width) || displayImage.naturalWidth;
-            const pixelRatio = originalWidthPx / currentWidthPx;
-
-            const cropX = Math.max(0, cropData.startX * pixelRatio);
-            const cropY = Math.max(0, cropData.startY * pixelRatio);
-            const cropWidthPx = Math.min(originalWidthPx - cropX, cropData.width * pixelRatio);
-            const cropHeightPx = Math.min(originalHeightPx - cropY, cropData.height * pixelRatio);
-
-            if (cropWidthPx <= 0 || cropHeightPx <= 0 || isNaN(cropWidthPx) || isNaN(cropHeightPx)) {
-                alert('Vùng cắt không hợp lệ! Vui lòng chọn lại vùng cắt.');
-                isSelecting = false;
-                cropOverlay.style.display = 'none';
-                cropData = null;
-                return;
-            }
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = cropWidthPx;
-            canvas.height = cropHeightPx;
-            ctx.drawImage(displayImage, cropX, cropY, cropWidthPx, cropHeightPx, 0, 0, cropWidthPx, cropHeightPx);
-
-            displayImage.src = canvas.toDataURL();
-            originalWidthPx = cropWidthPx;
-            originalHeightPx = cropHeightPx;
-            aspectRatio = originalWidthPx / originalHeightPx;
-            imageInfo.textContent = `Kích thước ảnh: ${Math.round(originalWidthPx)}px x ${Math.round(originalHeightPx)}px`;
-
-            cropData = null;
-            isSelecting = false;
-            cropOverlay.style.display = 'none';
-            selectedCellIndices = [];
-            selectedCells = 0;
-
-            updateDimensions();
-            createGrid();
-        }
-
-        function applyDragSelection() {
-            if (!selectData) return;
-
-            const { widthCells, heightCells } = getCellCounts();
-            const containerRect = imageContainer.getBoundingClientRect();
-            const cellWidth = containerRect.width / widthCells;
-            const cellHeight = containerRect.height / heightCells;
-
-            const startCol = Math.floor(selectData.startX / cellWidth);
-            const startRow = Math.floor(selectData.startY / cellHeight);
-            const endCol = Math.min(widthCells, Math.floor((selectData.startX + selectData.width) / cellWidth));
-            const endRow = Math.min(heightCells, Math.floor((selectData.startY + selectData.height) / cellHeight));
-
-            const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
-
-            for (let i = startRow; i < endRow; i++) {
-                for (let j = startCol; j < endCol; j++) {
-                    if (i >= 0 && i < heightCells && j >= 0 && j < widthCells) {
-                        const cellIndex = [i, j];
-                        if (mode === 'select') {
-                            if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                                selectedCellIndices.push(cellIndex);
-                                selectedCells++;
-                            }
-                        } else if (mode === 'deselect') {
-                            if (selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                                selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
-                                selectedCells--;
-                            }
-                        }
-                    }
-                }
-            }
-
-            selectData = null;
-            createGrid();
-        }
-
-        function applyAreaSelection(row, col) {
-            const size = parseInt(selectionAreaSize.value);
-            const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
-            const { widthCells, heightCells } = getCellCounts();
-
-            for (let i = row; i < Math.min(row + size, heightCells); i++) {
-                for (let j = col; j < Math.min(col + size, widthCells); j++) {
-                    const cellIndex = [i, j];
-                    if (mode === 'select') {
-                        if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                            selectedCellIndices.push(cellIndex);
-                            selectedCells++;
-                        }
-                    } else if (mode === 'deselect') {
-                        if (selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                            selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
-                            selectedCells--;
-                        }
-                    }
-                }
-            }
-            createGrid();
-        }
-
-// Hàm định dạng VND với dấu phẩy
-function formatVND(number) {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-// Hàm quy đổi và hiển thị giá VND, EUR, và tỷ giá
-function updateCurrencyConversion(totalPriceUSD) {
-    const resultVND = document.getElementById('resultVND');
-    const resultEUR = document.getElementById('resultEUR');
-    const exchangeRate = document.getElementById('exchangeRate');
-    
-    const apiKey = '191baef5cd8aa60cc8540e3e'; // Thay bằng API key của bạn
-    const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
-
-    fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-            if (data.result === 'success') {
-                const vndRate = data.conversion_rates.VND;
-                const eurRate = data.conversion_rates.EUR;
-                const totalPriceVND = (totalPriceUSD * vndRate).toFixed(0);
-                const totalPriceEUR = (totalPriceUSD * eurRate).toFixed(2);
-                resultVND.textContent = `Tổng tiền (VND): ${formatVND(totalPriceVND)} VND`;
-                resultEUR.textContent = `Tổng tiền (EUR): €${totalPriceEUR}`;
-                exchangeRate.textContent = `Tỷ giá: 1 USD = ${formatVND(vndRate.toFixed(0))} VND | 1 EUR = ${formatVND((vndRate / eurRate).toFixed(0))} VND`;
-            } else {
-                resultVND.textContent = `Tổng tiền (VND): Lỗi lấy tỉ giá`;
-                resultEUR.textContent = `Tổng tiền (EUR): Lỗi lấy tỉ giá`;
-                exchangeRate.textContent = `Tỷ giá: Lỗi lấy tỉ giá`;
-            }
-        })
-        .catch(error => {
-            console.error('Lỗi khi lấy tỉ giá:', error);
-            resultVND.textContent = `Tổng tiền (VND): Lỗi lấy tỉ giá`;
-            resultEUR.textContent = `Tổng tiền (EUR): Lỗi lấy tỉ giá`;
-            exchangeRate.textContent = `Tỷ giá: Lỗi lấy tỉ giá`;
-        });
-}
-       function updateResult() {
+function getCellCounts() {
+    const widthMm = parseFloat(widthMmInput.value) || 0;
+    const heightMm = parseFloat(heightMmInput.value) || 0;
     const cellSize = parseInt(cellSizeInput.value);
-    const sochia = cellSize * cellSize;
-    const pricePerCell = parseFloat(pricePerCellInput.value) || 0;
-    const totalAreaMm2 = selectedCells;
-    const totalAreaCm2 = totalAreaMm2 / sochia;
-    const totalPrice = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
-    result.textContent = `Tổng diện tích: ${totalAreaCm2.toFixed(2)} cm² (${totalAreaMm2} ô) - Tổng tiền: $${totalPrice}`;
+
+    const widthCm = widthMm / 10;
+    const widthInteger = Math.floor(widthCm);
+    const widthDecimal = widthCm - widthInteger;
+    let baseWidth;
+    if (widthDecimal < 0.1) {
+        baseWidth = widthInteger;
+    } else if (widthDecimal <= 0.5) {
+        baseWidth = widthInteger + 0.5;
+    } else {
+        baseWidth = widthInteger + 1;
+    }
+
+    const heightCm = heightMm / 10;
+    const heightInteger = Math.floor(heightCm);
+    const heightDecimal = heightCm - heightInteger;
+    let baseHeight;
+    if (heightDecimal < 0.1) {
+        baseHeight = heightInteger;
+    } else if (heightDecimal <= 0.5) {
+        baseHeight = heightInteger + 0.5;
+    } else {
+        baseHeight = heightInteger + 1;
+    }
+
+    const widthCells = baseWidth * cellSize;
+    const heightCells = baseHeight * cellSize;
+    return { widthCells: Math.max(1, widthCells), heightCells: Math.max(1, heightCells) };
 }
 
-function checkPrice() {
-    const cellSize = parseInt(cellSizeInput.value);
-    const sochia = cellSize * cellSize;
-    const pricePerCell = parseFloat(pricePerCellInput.value) || 0;
-    const totalAreaMm2 = selectedCells;
-    const totalPriceUSD = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
-    updateCurrencyConversion(totalPriceUSD);
+function updateDimensions() {
+    const zoom = parseFloat(zoomSlider.value);
+    let widthPx, heightPx;
+
+    if (!originalWidthPx || !originalHeightPx || isNaN(originalWidthPx) || isNaN(originalHeightPx)) {
+        return;
+    }
+
+    const defaultDisplayWidth = 500;
+    if (widthMmInput.value && aspectRatio) {
+        const widthMm = parseFloat(widthMmInput.value);
+        const heightMm = widthMm / aspectRatio;
+        heightMmInput.value = heightMm.toFixed(2);
+        widthPx = widthMm * 3.779527559 * zoom;
+        heightPx = heightMm * 3.779527559 * zoom;
+    } else if (heightMmInput.value && aspectRatio) {
+        const heightMm = parseFloat(heightMmInput.value);
+        const widthMm = heightMm * aspectRatio;
+        widthMmInput.value = widthMm.toFixed(2);
+        widthPx = widthMm * 3.779527559 * zoom;
+        heightPx = heightMm * 3.779527559 * zoom;
+    } else {
+        widthPx = defaultDisplayWidth * zoom;
+        heightPx = (defaultDisplayWidth / aspectRatio) * zoom;
+        widthMmInput.value = (widthPx / 3.779527559 / zoom).toFixed(2);
+        heightMmInput.value = (heightPx / 3.779527559 / zoom).toFixed(2);
+    }
+
+    displayImage.style.width = `${widthPx}px`;
+    displayImage.style.height = `${heightPx}px`;
+    gridCanvas.width = widthPx;
+    gridCanvas.height = heightPx;
+
+    if (!isCropping) {
+        createGrid();
+    } else if (cropData) {
+        cropOverlay.style.width = `${Math.min(cropData.width, widthPx)}px`;
+        cropOverlay.style.height = `${Math.min(cropData.height, heightPx)}px`;
+        cropData.width = Math.min(cropData.width, widthPx);
+        cropData.height = Math.min(cropData.height, heightPx);
+    }
 }
 
-pricePerCellInput.addEventListener('input', updateResult);
+function createGrid() {
+    const { widthCells, heightCells } = getCellCounts();
+    if (!widthCells || !heightCells || widthCells < 1 || heightCells < 1) {
+        alert('Vui lòng nhập kích thước ảnh hợp lệ!');
+        return;
+    }
+    if (!displayImage.src || displayImage.style.display === 'none') {
+        alert('Vui lòng tải ảnh trước!');
+        return;
+    }
 
-// Hàm xử lý vị trí từ sự kiện chuột hoặc cảm ứng
+    selectedCellIndices = selectedCellIndices.filter(([row, col]) => row < heightCells && col < widthCells);
+    selectedCells = selectedCellIndices.length;
+
+    const cellWidth = gridCanvas.width / widthCells;
+    const cellHeight = gridCanvas.height / heightCells;
+
+    ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= Math.floor(widthCells); i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellWidth, 0);
+        ctx.lineTo(i * cellWidth, gridCanvas.height);
+        ctx.stroke();
+    }
+    for (let i = 0; i <= Math.floor(heightCells); i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellHeight);
+        ctx.lineTo(gridCanvas.width, i * cellHeight);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+    selectedCellIndices.forEach(([row, col]) => {
+        let fillWidth = cellWidth;
+        let fillHeight = cellHeight;
+        if ((col + 1) * cellWidth > gridCanvas.width) {
+            fillWidth = gridCanvas.width - col * cellWidth;
+        }
+        if ((row + 1) * cellHeight > gridCanvas.height) {
+            fillHeight = gridCanvas.height - row * cellHeight;
+        }
+        ctx.fillRect(col * cellWidth, row * cellHeight, fillWidth, fillHeight);
+    });
+
+    updateResult();
+}
+
 function getPositionFromEvent(e) {
     const containerRect = imageContainer.getBoundingClientRect();
     let clientX, clientY;
@@ -754,11 +554,6 @@ function getPositionFromEvent(e) {
     };
 }
 
-// Biến để theo dõi trạng thái kéo handle
-let isResizing = false;
-let resizeHandle = null; // Lưu handle đang được kéo (top-left, v.v.)
-
-// Bắt đầu chọn hoặc cắt
 function handleStart(e) {
     e.preventDefault();
     if (!displayImage.src || displayImage.style.display === 'none') return;
@@ -766,25 +561,13 @@ function handleStart(e) {
     const pos = getPositionFromEvent(e);
     const target = e.target;
 
-    // Kiểm tra nếu click vào handle
     if (isCropping && target.classList.contains('resize-handle') && cropData) {
         isResizing = true;
-        resizeHandle = target.className.split(' ')[1]; // Lấy tên handle (top-left, v.v.)
+        resizeHandle = target.className.split(' ')[1];
         return;
     }
 
-    // Xử lý kéo vùng cắt mới hoặc chọn/xóa ô
-    if (isCropping && !isSelecting && !isResizing) {
-        isSelecting = true;
-        startX = pos.x;
-        startY = pos.y;
-        cropOverlay.style.display = 'block';
-        cropOverlay.style.left = `${startX}px`;
-        cropOverlay.style.top = `${startY}px`;
-        cropOverlay.style.width = '0px';
-        cropOverlay.style.height = '0px';
-        cropData = { startX, startY, width: 0, height: 0 };
-    } else if (!isCropping && isDragging && !isSelecting) {
+    if (!isCropping && isDragging && !isSelecting) {
         isSelecting = true;
         startX = pos.x;
         startY = pos.y;
@@ -795,7 +578,7 @@ function handleStart(e) {
         selectOverlay.style.height = '0px';
         selectData = { startX, startY, width: 0, height: 0 };
     } else if (!isCropping && !isDragging) {
-        isSelecting = true; // Luôn bật isSelecting để hỗ trợ kéo liên tục
+        isSelecting = true;
         const { widthCells, heightCells } = getCellCounts();
         const containerRect = imageContainer.getBoundingClientRect();
         const cellWidth = containerRect.width / widthCells;
@@ -810,7 +593,6 @@ function handleStart(e) {
     }
 }
 
-// Di chuyển khi kéo
 function handleMove(e) {
     e.preventDefault();
     if (!displayImage.src || displayImage.style.display === 'none') return;
@@ -843,6 +625,20 @@ function handleMove(e) {
                 width = endX - cropData.startX;
                 height = endY - cropData.startY;
                 break;
+            case 'top':
+                height = cropData.startY + cropData.height - endY;
+                startY = endY;
+                break;
+            case 'right':
+                width = endX - cropData.startX;
+                break;
+            case 'bottom':
+                height = endY - cropData.startY;
+                break;
+            case 'left':
+                width = cropData.startX + cropData.width - endX;
+                startX = endX;
+                break;
         }
         if (width < 0) {
             startX += width;
@@ -857,18 +653,6 @@ function handleMove(e) {
         cropOverlay.style.width = `${width}px`;
         cropOverlay.style.height = `${height}px`;
         cropData = { startX, startY, width, height };
-    } else if (isCropping && isSelecting) {
-        const left = Math.min(startX, endX);
-        const top = Math.min(startY, endY);
-        const width = Math.abs(endX - startX);
-        const height = Math.abs(endY - startY);
-
-        cropOverlay.style.left = `${left}px`;
-        cropOverlay.style.top = `${top}px`;
-        cropOverlay.style.width = `${width}px`;
-        cropOverlay.style.height = `${height}px`;
-
-        cropData = { startX: left, startY: top, width, height };
     } else if (!isCropping && isDragging && isSelecting) {
         const left = Math.min(startX, endX);
         const top = Math.min(startY, endY);
@@ -889,21 +673,19 @@ function handleMove(e) {
         const col = Math.floor(pos.x / cellWidth);
         const row = Math.floor(pos.y / cellHeight);
         if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
-            applyAreaSelection(row, col); // Áp dụng chọn/xóa liên tục khi kéo
+            applyAreaSelection(row, col);
             updateCursorOverlay(pos, row, col);
             cursorOverlay.style.display = 'block';
         }
     }
 }
 
-// Kết thúc kéo
 function handleEnd(e) {
-    if (isCropping && (isSelecting || isResizing)) {
-        isSelecting = false;
+    if (isCropping && isResizing) {
         isResizing = false;
         resizeHandle = null;
         if (cropData && cropData.width > 0 && cropData.height > 0) {
-            // Giữ cropOverlay hiển thị để điều chỉnh tiếp
+            // Giữ khung cắt hiển thị để tiếp tục điều chỉnh
         } else {
             cropOverlay.style.display = 'none';
             cropData = null;
@@ -913,20 +695,224 @@ function handleEnd(e) {
         selectOverlay.style.display = 'none';
         applyDragSelection();
     } else if (!isCropping && !isDragging && isSelecting) {
-        isSelecting = false; // Kết thúc chọn liên tục
+        isSelecting = false;
         cursorOverlay.style.display = 'none';
     }
 }
 
-// Thay thế các sự kiện cũ
-imageContainer.removeEventListener('mousedown', handleStart);
-imageContainer.removeEventListener('mousemove', handleMove);
-imageContainer.removeEventListener('mouseup', handleEnd);
-imageContainer.removeEventListener('touchstart', handleStart);
-imageContainer.removeEventListener('touchmove', handleMove);
-imageContainer.removeEventListener('touchend', handleEnd);
+function cropImage() {
+    if (!cropData || cropData.width <= 0 || cropData.height <= 0) {
+        alert('Vùng cắt không hợp lệ! Vui lòng chọn lại vùng cắt.');
+        cropOverlay.style.display = 'none';
+        cropData = null;
+        return;
+    }
 
-// Thêm sự kiện chuột và cảm ứng
+    const containerRect = imageContainer.getBoundingClientRect();
+    const zoom = parseFloat(zoomSlider.value);
+    const currentWidthPx = parseFloat(displayImage.style.width) || displayImage.naturalWidth;
+    const pixelRatio = originalWidthPx / currentWidthPx;
+
+    const cropX = Math.max(0, cropData.startX * pixelRatio);
+    const cropY = Math.max(0, cropData.startY * pixelRatio);
+    const cropWidthPx = Math.min(originalWidthPx - cropX, cropData.width * pixelRatio);
+    const cropHeightPx = Math.min(originalHeightPx - cropY, cropData.height * pixelRatio);
+
+    if (cropWidthPx <= 0 || cropHeightPx <= 0 || isNaN(cropWidthPx) || isNaN(cropHeightPx)) {
+        alert('Vùng cắt không hợp lệ! Vui lòng chọn lại vùng cắt.');
+        cropOverlay.style.display = 'none';
+        cropData = null;
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = cropWidthPx;
+    canvas.height = cropHeightPx;
+    ctx.drawImage(displayImage, cropX, cropY, cropWidthPx, cropHeightPx, 0, 0, cropWidthPx, cropHeightPx);
+
+    displayImage.src = canvas.toDataURL();
+    originalWidthPx = cropWidthPx;
+    originalHeightPx = cropHeightPx;
+    aspectRatio = originalWidthPx / originalHeightPx;
+    imageInfo.textContent = `Kích thước ảnh: ${Math.round(originalWidthPx)}px x ${Math.round(originalHeightPx)}px`;
+
+    cropData = null;
+    cropOverlay.style.display = 'none';
+    selectedCellIndices = [];
+    selectedCells = 0;
+
+    updateDimensions();
+    createGrid();
+}
+
+function applyDragSelection() {
+    if (!selectData) return;
+
+    const { widthCells, heightCells } = getCellCounts();
+    const containerRect = imageContainer.getBoundingClientRect();
+    const cellWidth = containerRect.width / widthCells;
+    const cellHeight = containerRect.height / heightCells;
+
+    const startCol = Math.floor(selectData.startX / cellWidth);
+    const startRow = Math.floor(selectData.startY / cellHeight);
+    const endCol = Math.min(widthCells, Math.floor((selectData.startX + selectData.width) / cellWidth));
+    const endRow = Math.min(heightCells, Math.floor((selectData.startY + selectData.height) / cellHeight));
+
+    const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
+
+    for (let i = startRow; i < endRow; i++) {
+        for (let j = startCol; j < endCol; j++) {
+            if (i >= 0 && i < heightCells && j >= 0 && j < widthCells) {
+                const cellIndex = [i, j];
+                if (mode === 'select') {
+                    if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
+                        selectedCellIndices.push(cellIndex);
+                        selectedCells++;
+                    }
+                } else if (mode === 'deselect') {
+                    if (selectedCellIndices.some(([r, c]) => r === i && c === j)) {
+                        selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
+                        selectedCells--;
+                    }
+                }
+            }
+        }
+    }
+
+    selectData = null;
+    createGrid();
+}
+
+function applyAreaSelection(row, col) {
+    const size = parseInt(selectionAreaSize.value);
+    const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
+    const { widthCells, heightCells } = getCellCounts();
+
+    for (let i = row; i < Math.min(row + size, heightCells); i++) {
+        for (let j = col; j < Math.min(col + size, widthCells); j++) {
+            const cellIndex = [i, j];
+            if (mode === 'select') {
+                if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
+                    selectedCellIndices.push(cellIndex);
+                    selectedCells++;
+                }
+            } else if (mode === 'deselect') {
+                if (selectedCellIndices.some(([r, c]) => r === i && c === j)) {
+                    selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
+                    selectedCells--;
+                }
+            }
+        }
+    }
+    createGrid();
+}
+
+function formatVND(number) {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function updateCurrencyConversion(totalPriceUSD) {
+    const resultVND = document.getElementById('resultVND');
+    const resultEUR = document.getElementById('resultEUR');
+    const exchangeRate = document.getElementById('exchangeRate');
+    
+    const defaultVndRate = 25300;
+    const defaultEurRate = 0.92;
+
+    const apiUrl = 'https://open.er-api.com/v6/latest/USD';
+
+    fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.result === 'success' && data.rates) {
+                const vndRate = data.rates.VND || defaultVndRate;
+                const eurRate = 1 / data.rates.EUR || defaultEurRate;
+                const totalPriceVND = (totalPriceUSD * vndRate).toFixed(0);
+                const totalPriceEUR = (totalPriceUSD / eurRate).toFixed(2);
+                resultVND.textContent = `Total amount (VND): ${formatVND(totalPriceVND)} VND`;
+                resultEUR.textContent = `Total amount (EUR): €${totalPriceEUR}`;
+                exchangeRate.textContent = `Exchange rate: 1 USD = ${formatVND(vndRate.toFixed(0))} VND | 1 EUR ≈ ${formatVND((vndRate / (1/eurRate)).toFixed(0))} VND`;
+            } else {
+                console.error('API error:', data.error || 'Unknown error from open.er-api');
+                useDefaultRates(totalPriceUSD, defaultVndRate, defaultEurRate);
+            }
+        })
+        .catch(error => {
+            console.error('Lỗi khi lấy tỉ giá:', error.message);
+            useDefaultRates(totalPriceUSD, defaultVndRate, defaultEurRate);
+        });
+
+    function useDefaultRates(totalPriceUSD, vndRate, eurRate) {
+        const totalPriceVND = (totalPriceUSD * vndRate).toFixed(0);
+        const totalPriceEUR = (totalPriceUSD / eurRate).toFixed(2);
+        resultVND.textContent = `Total amount (VND): ${formatVND(totalPriceVND)} VND (tỷ giá mặc định)`;
+        resultEUR.textContent = `Total amount (EUR): €${totalPriceEUR} (tỷ giá mặc định)`;
+        exchangeRate.textContent = `Exchange rate: Lỗi API - Dùng mặc định (1 USD = ${formatVND(vndRate)} VND | 1 USD ≈ ${eurRate} EUR)`;
+    }
+}
+
+function updateResult() {
+    const cellSize = parseInt(cellSizeInput.value);
+    const sochia = cellSize * cellSize;
+    const totalAreaMm2 = selectedCells;
+    const totalAreaCm2 = totalAreaMm2 / sochia;
+    let pricePerCell;
+
+    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
+    if (priceMode === 'auto') {
+        pricePerCell = getPricePerCm2(totalAreaCm2);
+    } else {
+        pricePerCell = parseFloat(pricePerCellInput.value) || 0;
+    }
+
+    const totalPriceUSD = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
+    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${totalAreaMm2} cells)`;
+    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD}`;
+    
+    const pricePerCm2Element = document.getElementById('pricePerCm2');
+    if (totalAreaCm2 > 0) {
+        const pricePerCm2 = (totalPriceUSD / totalAreaCm2).toFixed(2);
+        pricePerCm2Element.textContent = `Price per cm²: $${pricePerCm2}`;
+    } else {
+        pricePerCm2Element.textContent = `Price per cm²: $0.00`;
+    }
+}
+
+function checkPrice() {
+    const cellSize = parseInt(cellSizeInput.value);
+    const sochia = cellSize * cellSize;
+    const totalAreaMm2 = selectedCells;
+    const totalAreaCm2 = totalAreaMm2 / sochia;
+    let pricePerCell;
+
+    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
+    if (priceMode === 'auto') {
+        pricePerCell = getPricePerCm2(totalAreaCm2);
+    } else {
+        pricePerCell = parseFloat(pricePerCellInput.value) || 0;
+    }
+
+    const totalPriceUSD = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
+    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${totalAreaMm2} cells)`;
+    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD}`;
+    
+    const pricePerCm2Element = document.getElementById('pricePerCm2');
+    if (totalAreaCm2 > 0) {
+        const pricePerCm2 = (totalPriceUSD / totalAreaCm2).toFixed(2);
+        pricePerCm2Element.textContent = `Price per cm²: $${pricePerCm2}`;
+    } else {
+        pricePerCm2Element.textContent = `Price per cm²: $0.00`;
+    }
+    
+    updateCurrencyConversion(totalPriceUSD);
+}
+
 imageContainer.addEventListener('mousedown', handleStart);
 imageContainer.addEventListener('mousemove', handleMove);
 imageContainer.addEventListener('mouseup', handleEnd);
@@ -934,7 +920,38 @@ imageContainer.addEventListener('touchstart', handleStart, { passive: false });
 imageContainer.addEventListener('touchmove', handleMove, { passive: false });
 imageContainer.addEventListener('touchend', handleEnd, { passive: false });
 
-// Cập nhật cursorOverlay
+imageContainer.addEventListener('mouseleave', function() {
+    if (!isCropping && !isDragging) {
+        cursorOverlay.style.display = 'none';
+    }
+});
+
+imageContainer.addEventListener('mouseenter', function(e) {
+    if (isSelecting && !isCropping && !isDragging) {
+        const pos = getPositionFromEvent(e);
+        const { widthCells, heightCells } = getCellCounts();
+        const containerRect = imageContainer.getBoundingClientRect();
+        const cellWidth = containerRect.width / widthCells;
+        const cellHeight = containerRect.height / heightCells;
+        const col = Math.floor(pos.x / cellWidth);
+        const row = Math.floor(pos.y / cellHeight);
+        if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
+            updateCursorOverlay(pos, row, col);
+            cursorOverlay.style.display = 'block';
+        }
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && isCropping && cropData) {
+        cropImage();
+    } else if (e.key === 'Enter' && !isCropping && isDragging && selectData) {
+        isSelecting = false;
+        selectOverlay.style.display = 'none';
+        applyDragSelection();
+    }
+});
+
 function updateCursorOverlay(pos, row, col) {
     const size = parseInt(selectionAreaSize.value);
     const { widthCells, heightCells } = getCellCounts();
@@ -952,6 +969,6 @@ function updateCursorOverlay(pos, row, col) {
     cursorOverlay.style.left = `${left}px`;
     cursorOverlay.style.top = `${top}px`;
 }
-    </script>
+</script>
 </body>
 </html>
