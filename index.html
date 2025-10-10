@@ -35,7 +35,7 @@
             position: absolute;
             border: 2px dashed blue;
             background: rgba(0, 0, 255, 0.1);
-            pointer-events: none;
+            pointer-events: auto;
             display: none;
         }
         #selectOverlay {
@@ -61,83 +61,68 @@
         #selectionMode, #areaSize, #cropMode {
             margin-top: 10px;
         }
-#resultVND, #resultEUR {
-    margin-top: 10px;
-    font-weight: bold;
-}
-#cropOverlay {
-    position: absolute;
-    border: 2px dashed blue;
-    background: rgba(0, 0, 255, 0.1);
-    pointer-events: auto; /* Cho phép tương tác với handle */
-    display: none;
-}
-
-.resize-handle {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    background: rgba(0, 0, 255, 0.8);
-    border: 1px solid white;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.resize-handle.top-left {
-    top: -8px;
-    left: -8px;
-    cursor: nwse-resize;
-}
-
-.resize-handle.top-right {
-    top: -8px;
-    right: -8px;
-    cursor: nesw-resize;
-}
-
-.resize-handle.bottom-left {
-    bottom: -8px;
-    left: -8px;
-    cursor: nesw-resize;
-}
-
-.resize-handle.bottom-right {
-    bottom: -8px;
-    right: -8px;
-    cursor: nwse-resize;
-}
- #zoomSlider {
-  width: 100%;
-  max-width: 400px;
-  margin-top: 5px;
-}
-.resize-handle.top {
-    top: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    cursor: ns-resize;
-}
-
-.resize-handle.right {
-    right: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: ew-resize;
-}
-
-.resize-handle.bottom {
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    cursor: ns-resize;
-}
-
-.resize-handle.left {
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: ew-resize;
-}
+        #resultVND, #resultEUR {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .resize-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: rgba(0, 0, 255, 0.8);
+            border: 1px solid white;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .resize-handle.top-left {
+            top: -8px;
+            left: -8px;
+            cursor: nwse-resize;
+        }
+        .resize-handle.top-right {
+            top: -8px;
+            right: -8px;
+            cursor: nesw-resize;
+        }
+        .resize-handle.bottom-left {
+            bottom: -8px;
+            left: -8px;
+            cursor: nesw-resize;
+        }
+        .resize-handle.bottom-right {
+            bottom: -8px;
+            right: -8px;
+            cursor: nwse-resize;
+        }
+        #zoomSlider {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 5px;
+        }
+        .resize-handle.top {
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: ns-resize;
+        }
+        .resize-handle.right {
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: ew-resize;
+        }
+        .resize-handle.bottom {
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: ns-resize;
+        }
+        .resize-handle.left {
+            left: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: ew-resize;
+        }
     </style>
 </head>
 <body>
@@ -154,27 +139,27 @@
         </div>
         <br>
         <div>
-    <label>Chế độ giá: </label>
-    <label><input type="radio" name="priceMode" value="auto" checked> Tự động</label>
-    <label><input type="radio" name="priceMode" value="manual"> Thủ công</label>
-</div>
-<div id="manualPriceInput">
-    <label>Price per cm² (USD): </label>
-    <input type="number" id="pricePerCell" min="0" step="0.01" value="1">
-</div>
-         <br>
+            <label>Chế độ giá: </label>
+            <label><input type="radio" name="priceMode" value="auto" checked> Tự động</label>
+            <label><input type="radio" name="priceMode" value="manual"> Thủ công</label>
+        </div>
+        <div id="manualPriceInput">
+            <label>Price per cm² (USD): </label>
+            <input type="number" id="pricePerCell" min="0" step="0.01" value="1">
+        </div>
+        <br>
         <div style="font-style: italic; font-size: 14px; color: grey;">
-    1->25=0.8-1 | 26->100=0.6-0.8 | 101->199=0.5-0.7
-</div>
-<div style="font-style: italic; font-size: 14px; color: grey;">
-    200->299=0.45-0.6 | &gt;300=0.4-0.5
-</div>
-<div id="zoomContainer">
-    <label>Thu phóng ảnh:</label><br>
-    <input type="range" id="zoomSlider" min="0.5" max="2" step="0.1" value="1">
-</div>
-<div>
-<br>
+            1->25=0.8-1 | 26->100=0.6-0.8 | 101->199=0.5-0.7
+        </div>
+        <div style="font-style: italic; font-size: 14px; color: grey;">
+            200->299=0.45-0.6 | &gt;300=0.4-0.5
+        </div>
+        <div id="zoomContainer">
+            <label>Thu phóng ảnh:</label><br>
+            <input type="range" id="zoomSlider" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div>
+            <br>
             <label>Kích thước ô (cm²): </label>
             <select id="cellSize">
                 <option value="2" selected>2x2</option>
@@ -209,52 +194,55 @@
             </select>
         </div>
         <div id="selectionMode">
-    <label><input type="radio" name="mode" value="select" checked> Chọn ô</label>
-    <label><input type="radio" name="mode" value="deselect"> Xóa ô</label>   
-<label><input type="radio" name="mode" value="crop"> Cắt ảnh</label> 
-    <br><br>
-    <div id="selectMethodOptions">
-        <label><input type="radio" name="selectMethod" value="move" checked> Di chuyển chuột</label>
-        <label><input type="radio" name="selectMethod" value="drag"> Kéo để chọn</label>
-    </div>
-</div>
-<br>
+            <label><input type="radio" name="mode" value="select" checked> Chọn ô</label>
+            <label><input type="radio" name="mode" value="deselect"> Xóa ô</label>   
+            <label><input type="radio" name="mode" value="crop"> Cắt ảnh</label> 
+<div id="difficultyOptions" style="margin-top: 10px; display: none;">
+                    <label><input type="radio" name="difficulty" value="very_easy" checked><span style="color: limegreen;">Rất dễ</span></label>
+                    <label><input type="radio" name="difficulty" value="easy"><span style="color: blue;">Dễ</span></label>
+                    <label><input type="radio" name="difficulty" value="medium"><span style="color: gold;">Vừa</span></label>
+                    <label><input type="radio" name="difficulty" value="hard"><span style="color: orange;">Khó</span></label>
+                    <label><input type="radio" name="difficulty" value="very_hard"><span style="color: red;">Rất khó</span></label>
+            <br><br>
+            <div id="selectMethodOptions">
+                </div>
+                <label><input type="radio" name="selectMethod" value="move" checked> Di chuyển chuột</label>
+                <label><input type="radio" name="selectMethod" value="drag"> Kéo để chọn</label>
+            </div>
+        </div>
+        <br>
         <div style="display: flex; gap: 10px; align-items: center;">
-    <button onclick="createGrid()">Tạo lưới</button>
-    <div id="cropMode" style="display: none;">
-        <button onclick="cropImage()">Cắt</button>
+            <button onclick="createGrid()">Tạo lưới</button>
+            <div id="cropMode" style="display: none;">
+                <button onclick="cropImage()">Cắt</button>
+            </div>
+        </div>
+        <br>
+        <div id="imageContainer">
+            <img id="displayImage" style="display: none;">
+            <canvas id="gridCanvas"></canvas>
+            <div id="cursorOverlay"></div>
+            <div id="cropOverlay">
+                <div class="resize-handle top-left"></div>
+                <div class="resize-handle top-right"></div>
+                <div class="resize-handle bottom-left"></div>
+                <div class="resize-handle bottom-right"></div>
+                <div class="resize-handle top"></div>
+                <div class="resize-handle right"></div>
+                <div class="resize-handle bottom"></div>
+                <div class="resize-handle left"></div>
+            </div>
+            <div id="selectOverlay"></div>
+        </div>
+        <div id="totalArea" style="font-weight: bold;">Total area: 0 cm² (0 cells)</div>
+        <div id="resultDetails" style="margin-top: 10px;"></div>
+        <div id="totalPrice" style="font-weight: bold;">Total amount (USD): $0</div>
+        <div id="resultVND"></div>
+        <div id="resultEUR"></div>
+        <div id="exchangeRate"></div>
+        <br>
+        <button onclick="checkPrice()">Check Price</button>
     </div>
-</div>
-<br>
-   <div id="imageContainer">
-    <img id="displayImage" style="display: none;">
-    <canvas id="gridCanvas"></canvas>
-    <div id="cursorOverlay"></div>
-    <div id="cropOverlay">
-        <div class="resize-handle top-left"></div>
-        <div class="resize-handle top-right"></div>
-        <div class="resize-handle bottom-left"></div>
-        <div class="resize-handle bottom-right"></div>
-    <div class="resize-handle top-left"></div>
-    <div class="resize-handle top-right"></div>
-    <div class="resize-handle bottom-left"></div>
-    <div class="resize-handle bottom-right"></div>
-    <div class="resize-handle top"></div>
-    <div class="resize-handle right"></div>
-    <div class="resize-handle bottom"></div>
-    <div class="resize-handle left"></div>
-    </div>
-    <div id="selectOverlay"></div>
-</div>
-<div id="totalArea" style="font-weight: bold;">Total area: 0 cm² (0 cells)</div>
-<div id="pricePerCm2" style="margin-top: 10px; font-weight: bold;"></div>
-<div id="resultVND"></div>
-<div id="totalPrice" style="font-weight: bold;">Total amount (USD): $0</div>
-<div id="resultEUR"></div>
-<div id="exchangeRate"></div>
-<br>
-<button onclick="checkPrice()">Check Price</button>
-
     <script>
 const imageInput = document.getElementById('imageInput');
 const displayImage = document.getElementById('displayImage');
@@ -290,6 +278,13 @@ const ctx = gridCanvas.getContext('2d');
 const priceModeInputs = document.getElementsByName('priceMode');
 const manualPriceInput = document.getElementById('manualPriceInput');
 
+// Khởi tạo trạng thái ban đầu cho difficultyOptions
+document.addEventListener('DOMContentLoaded', function() {
+    const selectedMode = Array.from(selectionModeInputs).find(input => input.checked).value;
+    document.getElementById('difficultyOptions').style.display = selectedMode === 'select' ? 'block' : 'none';
+    document.getElementById('selectMethodOptions').style.display = selectedMode === 'crop' ? 'none' : 'block';
+});
+
 priceModeInputs.forEach(input => {
     input.addEventListener('change', function() {
         manualPriceInput.style.display = input.value === 'manual' ? 'block' : 'none';
@@ -299,13 +294,13 @@ priceModeInputs.forEach(input => {
 
 function getPricePerCm2(totalAreaCm2) {
     if (totalAreaCm2 <= 6) return 2.5;
-    if (totalAreaCm2 <= 16) return 2.2;
-    if (totalAreaCm2 <= 25) return 2.0;
-    if (totalAreaCm2 <= 36) return 1.8;
-    if (totalAreaCm2 <= 49) return 1.6;
-    if (totalAreaCm2 <= 64) return 1.4;
-    if (totalAreaCm2 <= 81) return 1.2;
-    if (totalAreaCm2 <= 100) return 1.0;
+    if (totalAreaCm2 <= 16) return 2;
+    if (totalAreaCm2 <= 25) return 1.8;
+    if (totalAreaCm2 <= 36) return 1.6;
+    if (totalAreaCm2 <= 49) return 1.5;
+    if (totalAreaCm2 <= 64) return 1.2;
+    if (totalAreaCm2 <= 81) return 1;
+    if (totalAreaCm2 <= 100) return 0.8;
     return 0.8;
 }
 
@@ -366,8 +361,6 @@ selectionAreaSize.addEventListener('change', function() {
     updateResult();
 });
 
-zoomSlider.addEventListener('input', updateDimensions);
-
 selectionModeInputs.forEach(input => {
     input.addEventListener('change', function() {
         isSelecting = false;
@@ -377,6 +370,7 @@ selectionModeInputs.forEach(input => {
         selectOverlay.style.display = 'none';
         cropModeDiv.style.display = isCropping ? 'block' : 'none';
         document.getElementById('selectMethodOptions').style.display = isCropping ? 'none' : 'block';
+        document.getElementById('difficultyOptions').style.display = input.value === 'select' ? 'block' : 'none';
         
         if (isCropping && displayImage.src && displayImage.style.display !== 'none') {
             const containerRect = imageContainer.getBoundingClientRect();
@@ -416,33 +410,32 @@ function getCellCounts() {
     const heightMm = parseFloat(heightMmInput.value) || 0;
     const cellSize = parseInt(cellSizeInput.value);
 
+    const xyz = cellSize === 2 ? 0.5 :
+                cellSize === 3 ? 1/3 :
+                cellSize === 4 ? 0.25 :
+                cellSize === 5 ? 0.2 :
+                cellSize === 6 ? 1/6 :
+                cellSize === 7 ? 1/7 :
+                cellSize === 8 ? 1/8 :
+                cellSize === 9 ? 1/9 :
+                0.1;
+
     const widthCm = widthMm / 10;
-    const widthInteger = Math.floor(widthCm);
-    const widthDecimal = widthCm - widthInteger;
-    let baseWidth;
-    if (widthDecimal < 0.1) {
-        baseWidth = widthInteger;
-    } else if (widthDecimal <= 0.5) {
-        baseWidth = widthInteger + 0.5;
-    } else {
-        baseWidth = widthInteger + 1;
-    }
-
     const heightCm = heightMm / 10;
-    const heightInteger = Math.floor(heightCm);
-    const heightDecimal = heightCm - heightInteger;
-    let baseHeight;
-    if (heightDecimal < 0.1) {
-        baseHeight = heightInteger;
-    } else if (heightDecimal <= 0.5) {
-        baseHeight = heightInteger + 0.5;
-    } else {
-        baseHeight = heightInteger + 1;
-    }
 
-    const widthCells = baseWidth * cellSize;
-    const heightCells = baseHeight * cellSize;
-    return { widthCells: Math.max(1, widthCells), heightCells: Math.max(1, heightCells) };
+    const fullWidthCells = Math.floor(widthCm / xyz);
+    const remainderWidth = widthCm % xyz;
+    const totalWidthCells = fullWidthCells + (remainderWidth > 0 ? 1 : 0);
+
+    const fullHeightCells = Math.floor(heightCm / xyz);
+    const remainderHeight = heightCm % xyz;
+    const totalHeightCells = fullHeightCells + (remainderHeight > 0 ? 1 : 0);
+
+    return { 
+        fullWidthCells, totalWidthCells, remainderWidth, 
+        fullHeightCells, totalHeightCells, remainderHeight, 
+        xyz 
+    };
 }
 
 function updateDimensions() {
@@ -488,9 +481,32 @@ function updateDimensions() {
     }
 }
 
+function getGridPositions() {
+    const { totalWidthCells, remainderWidth, totalHeightCells, remainderHeight, xyz } = getCellCounts();
+    const widthCm = parseFloat(widthMmInput.value) / 10;
+    const heightCm = parseFloat(heightMmInput.value) / 10;
+    const pixelPerCm = gridCanvas.width / widthCm;
+
+    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
+    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
+    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
+    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
+
+    const xPositions = [0];
+    for (let i = 0; i < totalWidthCells; i++) {
+        xPositions.push(xPositions[i] + cellWidthsCm[i] * pixelPerCm);
+    }
+    const yPositions = [0];
+    for (let i = 0; i < totalHeightCells; i++) {
+        yPositions.push(yPositions[i] + cellHeightsCm[i] * pixelPerCm);
+    }
+
+    return { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm };
+}
+
 function createGrid() {
-    const { widthCells, heightCells } = getCellCounts();
-    if (!widthCells || !heightCells || widthCells < 1 || heightCells < 1) {
+    const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
+    if (totalWidthCells < 1 || totalHeightCells < 1) {
         alert('Vui lòng nhập kích thước ảnh hợp lệ!');
         return;
     }
@@ -499,40 +515,59 @@ function createGrid() {
         return;
     }
 
-    selectedCellIndices = selectedCellIndices.filter(([row, col]) => row < heightCells && col < widthCells);
+    selectedCellIndices = selectedCellIndices.filter(([row, col]) => row < totalHeightCells && col < totalWidthCells);
     selectedCells = selectedCellIndices.length;
 
-    const cellWidth = gridCanvas.width / widthCells;
-    const cellHeight = gridCanvas.height / heightCells;
+    const widthCm = parseFloat(widthMmInput.value) / 10;
+    const heightCm = parseFloat(heightMmInput.value) / 10;
+    const pixelPerCm = gridCanvas.width / widthCm;
+
+    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
+    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
+    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
+    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
+
+    const xPositions = [0];
+    for (let i = 0; i < totalWidthCells; i++) {
+        xPositions.push(xPositions[i] + cellWidthsCm[i] * pixelPerCm);
+    }
+    const yPositions = [0];
+    for (let i = 0; i < totalHeightCells; i++) {
+        yPositions.push(yPositions[i] + cellHeightsCm[i] * pixelPerCm);
+    }
 
     ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
 
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= Math.floor(widthCells); i++) {
+    for (let i = 0; i <= totalWidthCells; i++) {
+        const x = xPositions[i];
         ctx.beginPath();
-        ctx.moveTo(i * cellWidth, 0);
-        ctx.lineTo(i * cellWidth, gridCanvas.height);
-        ctx.stroke();
-    }
-    for (let i = 0; i <= Math.floor(heightCells); i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, i * cellHeight);
-        ctx.lineTo(gridCanvas.width, i * cellHeight);
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, gridCanvas.height);
         ctx.stroke();
     }
 
-    ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-    selectedCellIndices.forEach(([row, col]) => {
-        let fillWidth = cellWidth;
-        let fillHeight = cellHeight;
-        if ((col + 1) * cellWidth > gridCanvas.width) {
-            fillWidth = gridCanvas.width - col * cellWidth;
-        }
-        if ((row + 1) * cellHeight > gridCanvas.height) {
-            fillHeight = gridCanvas.height - row * cellHeight;
-        }
-        ctx.fillRect(col * cellWidth, row * cellHeight, fillWidth, fillHeight);
+    for (let i = 0; i <= totalHeightCells; i++) {
+        const y = yPositions[i];
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(gridCanvas.width, y);
+        ctx.stroke();
+    }
+
+    selectedCellIndices.forEach(([row, col, difficulty]) => {
+        const left = xPositions[col];
+        const top = yPositions[row];
+        const fillWidth = cellWidthsCm[col] * pixelPerCm;
+        const fillHeight = cellHeightsCm[row] * pixelPerCm;
+        
+        ctx.fillStyle = difficulty === 'very_easy' ? 'rgba(50, 205, 50, 0.3)' :
+                        difficulty === 'easy' ? 'rgba(0, 0, 255, 0.3)' :
+                        difficulty === 'medium' ? 'rgba(255, 215, 0, 0.3)' :
+                        difficulty === 'hard' ? 'rgba(255, 165, 0, 0.3)' :
+                        'rgba(255, 0, 0, 0.3)';
+        ctx.fillRect(left, top, fillWidth, fillHeight);
     });
 
     updateResult();
@@ -579,13 +614,25 @@ function handleStart(e) {
         selectData = { startX, startY, width: 0, height: 0 };
     } else if (!isCropping && !isDragging) {
         isSelecting = true;
-        const { widthCells, heightCells } = getCellCounts();
-        const containerRect = imageContainer.getBoundingClientRect();
-        const cellWidth = containerRect.width / widthCells;
-        const cellHeight = containerRect.height / heightCells;
-        const col = Math.floor(pos.x / cellWidth);
-        const row = Math.floor(pos.y / cellHeight);
-        if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
+        const pos = getPositionFromEvent(e);
+        const { totalWidthCells, totalHeightCells } = getCellCounts();
+        const { xPositions, yPositions } = getGridPositions();
+
+        let col = 0, row = 0;
+        for (let i = 0; i < totalWidthCells; i++) {
+            if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
+                col = i;
+                break;
+            }
+        }
+        for (let i = 0; i < totalHeightCells; i++) {
+            if (pos.y >= yPositions[i] && pos.y < yPositions[i + 1]) {
+                row = i;
+                break;
+            }
+        }
+
+        if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
             applyAreaSelection(row, col);
             updateCursorOverlay(pos, row, col);
             cursorOverlay.style.display = 'block';
@@ -666,13 +713,25 @@ function handleMove(e) {
 
         selectData = { startX: left, startY: top, width, height };
     } else if (!isCropping && !isDragging && isSelecting) {
-        const { widthCells, heightCells } = getCellCounts();
-        const containerRect = imageContainer.getBoundingClientRect();
-        const cellWidth = containerRect.width / widthCells;
-        const cellHeight = containerRect.height / heightCells;
-        const col = Math.floor(pos.x / cellWidth);
-        const row = Math.floor(pos.y / cellHeight);
-        if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
+        const pos = getPositionFromEvent(e);
+        const { totalWidthCells, totalHeightCells } = getCellCounts();
+        const { xPositions, yPositions } = getGridPositions();
+
+        let col = 0, row = 0;
+        for (let i = 0; i < totalWidthCells; i++) {
+            if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
+                col = i;
+                break;
+            }
+        }
+        for (let i = 0; i < totalHeightCells; i++) {
+            if (pos.y >= yPositions[i] && pos.y < yPositions[i + 1]) {
+                row = i;
+                break;
+            }
+        }
+
+        if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
             applyAreaSelection(row, col);
             updateCursorOverlay(pos, row, col);
             cursorOverlay.style.display = 'block';
@@ -749,33 +808,39 @@ function cropImage() {
 function applyDragSelection() {
     if (!selectData) return;
 
-    const { widthCells, heightCells } = getCellCounts();
-    const containerRect = imageContainer.getBoundingClientRect();
-    const cellWidth = containerRect.width / widthCells;
-    const cellHeight = containerRect.height / heightCells;
+    const { xPositions, yPositions } = getGridPositions();
+    const { totalWidthCells, totalHeightCells } = getCellCounts();
+    const difficulty = Array.from(document.getElementsByName('difficulty')).find(input => input.checked).value;
 
-    const startCol = Math.floor(selectData.startX / cellWidth);
-    const startRow = Math.floor(selectData.startY / cellHeight);
-    const endCol = Math.min(widthCells, Math.floor((selectData.startX + selectData.width) / cellWidth));
-    const endRow = Math.min(heightCells, Math.floor((selectData.startY + selectData.height) / cellHeight));
+    let startCol = 0, startRow = 0, endCol = 0, endRow = 0;
+    for (let i = 0; i < totalWidthCells; i++) {
+        if (selectData.startX >= xPositions[i] && selectData.startX < xPositions[i + 1]) startCol = i;
+        if (selectData.startX + selectData.width >= xPositions[i] && selectData.startX + selectData.width < xPositions[i + 1]) endCol = i;
+    }
+    endCol = Math.min(totalWidthCells - 1, endCol + 1);
+    for (let i = 0; i < totalHeightCells; i++) {
+        if (selectData.startY >= yPositions[i] && selectData.startY < yPositions[i + 1]) startRow = i;
+        if (selectData.startY + selectData.height >= yPositions[i] && selectData.startY + selectData.height < yPositions[i + 1]) endRow = i;
+    }
+    endRow = Math.min(totalHeightCells - 1, endRow + 1);
 
     const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
 
-    for (let i = startRow; i < endRow; i++) {
-        for (let j = startCol; j < endCol; j++) {
-            if (i >= 0 && i < heightCells && j >= 0 && j < widthCells) {
-                const cellIndex = [i, j];
-                if (mode === 'select') {
-                    if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                        selectedCellIndices.push(cellIndex);
-                        selectedCells++;
-                    }
-                } else if (mode === 'deselect') {
-                    if (selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                        selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
-                        selectedCells--;
-                    }
+    for (let i = startRow; i <= endRow; i++) {
+        for (let j = startCol; j <= endCol; j++) {
+            const cellIndex = [i, j, difficulty];
+            if (mode === 'select') {
+                if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
+                    selectedCellIndices.push(cellIndex);
+                    selectedCells++;
+                } else {
+                    selectedCellIndices = selectedCellIndices.map(item => 
+                        item[0] === i && item[1] === j ? [i, j, difficulty] : item
+                    );
                 }
+            } else if (mode === 'deselect') {
+                selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
+                selectedCells--;
             }
         }
     }
@@ -787,21 +852,24 @@ function applyDragSelection() {
 function applyAreaSelection(row, col) {
     const size = parseInt(selectionAreaSize.value);
     const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
-    const { widthCells, heightCells } = getCellCounts();
+    const difficulty = Array.from(document.getElementsByName('difficulty')).find(input => input.checked).value;
+    const { totalWidthCells, totalHeightCells } = getCellCounts();
 
-    for (let i = row; i < Math.min(row + size, heightCells); i++) {
-        for (let j = col; j < Math.min(col + size, widthCells); j++) {
-            const cellIndex = [i, j];
+    for (let i = row; i < Math.min(row + size, totalHeightCells); i++) {
+        for (let j = col; j < Math.min(col + size, totalWidthCells); j++) {
+            const cellIndex = [i, j, difficulty];
             if (mode === 'select') {
                 if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
                     selectedCellIndices.push(cellIndex);
                     selectedCells++;
+                } else {
+                    selectedCellIndices = selectedCellIndices.map(item => 
+                        item[0] === i && item[1] === j ? [i, j, difficulty] : item
+                    );
                 }
             } else if (mode === 'deselect') {
-                if (selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                    selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
-                    selectedCells--;
-                }
+                selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
+                selectedCells--;
             }
         }
     }
@@ -858,58 +926,136 @@ function updateCurrencyConversion(totalPriceUSD) {
 }
 
 function updateResult() {
-    const cellSize = parseInt(cellSizeInput.value);
-    const sochia = cellSize * cellSize;
-    const totalAreaMm2 = selectedCells;
-    const totalAreaCm2 = totalAreaMm2 / sochia;
-    let pricePerCell;
+    const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
 
+    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
+    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
+    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
+    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
+
+    const areasByDifficulty = {
+        very_easy: 0,
+        easy: 0,
+        medium: 0,
+        hard: 0,
+        very_hard: 0
+    };
+
+    selectedCellIndices.forEach(([row, col, difficulty]) => {
+        const area = cellWidthsCm[col] * cellHeightsCm[row];
+        areasByDifficulty[difficulty] += area;
+    });
+
+    const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
+    let pricePerCm2;
     const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
     if (priceMode === 'auto') {
-        pricePerCell = getPricePerCm2(totalAreaCm2);
+        pricePerCm2 = getPricePerCm2(totalAreaCm2);
     } else {
-        pricePerCell = parseFloat(pricePerCellInput.value) || 0;
+        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
     }
 
-    const totalPriceUSD = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
-    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${totalAreaMm2} cells)`;
-    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD}`;
-    
-    const pricePerCm2Element = document.getElementById('pricePerCm2');
-    if (totalAreaCm2 > 0) {
-        const pricePerCm2 = (totalPriceUSD / totalAreaCm2).toFixed(2);
-        pricePerCm2Element.textContent = `Price per cm²: $${pricePerCm2}`;
-    } else {
-        pricePerCm2Element.textContent = `Price per cm²: $0.00`;
+    const priceAdjustments = {
+        very_easy: 0,
+        easy: 0.1,
+        medium: 0.2,
+        hard: 0.3,
+        very_hard: 0.4
+    };
+
+    let totalPriceUSD = 0;
+    const resultDetails = document.getElementById('resultDetails');
+    resultDetails.innerHTML = '';
+
+    for (const difficulty in areasByDifficulty) {
+        const area = areasByDifficulty[difficulty];
+        if (area > 0) {
+            const adjustedPrice = pricePerCm2 + priceAdjustments[difficulty];
+            const totalPrice = (area * adjustedPrice).toFixed(2);
+            totalPriceUSD += parseFloat(totalPrice);
+
+            const color = difficulty === 'very_easy' ? 'limegreen' :
+                          difficulty === 'easy' ? 'blue' :
+                          difficulty === 'medium' ? 'gold' :
+                          difficulty === 'hard' ? 'orange' : 'red';
+
+            resultDetails.innerHTML += `
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
+                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)} / Total (USD): $${totalPrice}</span>
+                </div>
+            `;
+        }
     }
+
+    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
+    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD.toFixed(2)}`;
 }
 
 function checkPrice() {
-    const cellSize = parseInt(cellSizeInput.value);
-    const sochia = cellSize * cellSize;
-    const totalAreaMm2 = selectedCells;
-    const totalAreaCm2 = totalAreaMm2 / sochia;
-    let pricePerCell;
+    const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
+    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
+    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
+    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
+    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
 
+    const areasByDifficulty = {
+        very_easy: 0,
+        easy: 0,
+        medium: 0,
+        hard: 0,
+        very_hard: 0
+    };
+
+    selectedCellIndices.forEach(([row, col, difficulty]) => {
+        const area = cellWidthsCm[col] * cellHeightsCm[row];
+        areasByDifficulty[difficulty] += area;
+    });
+
+    const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
+    let pricePerCm2;
     const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
     if (priceMode === 'auto') {
-        pricePerCell = getPricePerCm2(totalAreaCm2);
+        pricePerCm2 = getPricePerCm2(totalAreaCm2);
     } else {
-        pricePerCell = parseFloat(pricePerCellInput.value) || 0;
+        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
     }
 
-    const totalPriceUSD = (totalAreaMm2 * pricePerCell / sochia).toFixed(2);
-    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${totalAreaMm2} cells)`;
-    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD}`;
-    
-    const pricePerCm2Element = document.getElementById('pricePerCm2');
-    if (totalAreaCm2 > 0) {
-        const pricePerCm2 = (totalPriceUSD / totalAreaCm2).toFixed(2);
-        pricePerCm2Element.textContent = `Price per cm²: $${pricePerCm2}`;
-    } else {
-        pricePerCm2Element.textContent = `Price per cm²: $0.00`;
+    const priceAdjustments = {
+        very_easy: 0,
+        easy: 0.1,
+        medium: 0.2,
+        hard: 0.3,
+        very_hard: 0.4
+    };
+
+    let totalPriceUSD = 0;
+    const resultDetails = document.getElementById('resultDetails');
+    resultDetails.innerHTML = '';
+
+    for (const difficulty in areasByDifficulty) {
+        const area = areasByDifficulty[difficulty];
+        if (area > 0) {
+            const adjustedPrice = pricePerCm2 + priceAdjustments[difficulty];
+            const totalPrice = (area * adjustedPrice).toFixed(2);
+            totalPriceUSD += parseFloat(totalPrice);
+
+            const color = difficulty === 'very_easy' ? 'limegreen' :
+                          difficulty === 'easy' ? 'blue' :
+                          difficulty === 'medium' ? 'gold' :
+                          difficulty === 'hard' ? 'orange' : 'red';
+
+            resultDetails.innerHTML += `
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
+                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)} / Total (USD): $${totalPrice}</span>
+                </div>
+            `;
+        }
     }
-    
+
+    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
+    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD.toFixed(2)}`;
     updateCurrencyConversion(totalPriceUSD);
 }
 
@@ -929,13 +1075,22 @@ imageContainer.addEventListener('mouseleave', function() {
 imageContainer.addEventListener('mouseenter', function(e) {
     if (isSelecting && !isCropping && !isDragging) {
         const pos = getPositionFromEvent(e);
-        const { widthCells, heightCells } = getCellCounts();
-        const containerRect = imageContainer.getBoundingClientRect();
-        const cellWidth = containerRect.width / widthCells;
-        const cellHeight = containerRect.height / heightCells;
-        const col = Math.floor(pos.x / cellWidth);
-        const row = Math.floor(pos.y / cellHeight);
-        if (row >= 0 && row < heightCells && col >= 0 && col < widthCells) {
+        const { totalWidthCells, totalHeightCells } = getCellCounts();
+        const { xPositions, yPositions } = getGridPositions();
+        let col = 0, row = 0;
+        for (let i = 0; i < totalWidthCells; i++) {
+            if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
+                col = i;
+                break;
+            }
+        }
+        for (let i = 0; i < totalHeightCells; i++) {
+            if (pos.y >= yPositions[i] && pos.y < yPositions[i + 1]) {
+                row = i;
+                break;
+            }
+        }
+        if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
             updateCursorOverlay(pos, row, col);
             cursorOverlay.style.display = 'block';
         }
@@ -954,21 +1109,30 @@ document.addEventListener('keydown', function(e) {
 
 function updateCursorOverlay(pos, row, col) {
     const size = parseInt(selectionAreaSize.value);
-    const { widthCells, heightCells } = getCellCounts();
-    const containerRect = imageContainer.getBoundingClientRect();
-    const cellWidth = containerRect.width / widthCells;
-    const cellHeight = containerRect.height / heightCells;
+    const { totalWidthCells, totalHeightCells } = getCellCounts();
+    const { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm } = getGridPositions();
 
-    const overlayWidth = Math.min(size, widthCells - col) * cellWidth;
-    const overlayHeight = Math.min(size, heightCells - row) * cellHeight;
-    const left = col * cellWidth;
-    const top = row * cellHeight;
+    let overlayWidth = 0;
+    for (let j = col; j < Math.min(col + size, totalWidthCells); j++) {
+        overlayWidth += cellWidthsCm[j] * pixelPerCm;
+    }
+    let overlayHeight = 0;
+    for (let i = row; i < Math.min(row + size, totalHeightCells); i++) {
+        overlayHeight += cellHeightsCm[i] * pixelPerCm;
+    }
+
+    const left = xPositions[col];
+    const top = yPositions[row];
 
     cursorOverlay.style.width = `${overlayWidth}px`;
     cursorOverlay.style.height = `${overlayHeight}px`;
     cursorOverlay.style.left = `${left}px`;
     cursorOverlay.style.top = `${top}px`;
 }
-</script>
+
+zoomSlider.addEventListener('input', function() {
+    updateDimensions();
+});
+    </script>
 </body>
 </html>
