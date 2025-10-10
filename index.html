@@ -988,6 +988,13 @@ function updateResult() {
         }
     }
 
+    // Adjust totalPriceUSD based on conditions
+    if (totalPriceUSD <= 10) {
+        totalPriceUSD = 10;
+    } else if (totalPriceUSD > 10 && totalPriceUSD < 15) {
+        totalPriceUSD = 15;
+    }
+
     document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
     document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD.toFixed(2)}`;
 }
@@ -1052,6 +1059,13 @@ function checkPrice() {
                 </div>
             `;
         }
+    }
+
+    // Adjust totalPriceUSD based on conditions
+    if (totalPriceUSD <= 10) {
+        totalPriceUSD = 10;
+    } else if (totalPriceUSD > 10 && totalPriceUSD < 15) {
+        totalPriceUSD = 15;
     }
 
     document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
