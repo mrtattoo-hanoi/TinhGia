@@ -293,15 +293,23 @@ priceModeInputs.forEach(input => {
 });
 
 function getPricePerCm2(totalAreaCm2) {
-    if (totalAreaCm2 <= 6) return 2.5;
+    if (totalAreaCm2 < 6) return 3.5;
+    if (totalAreaCm2 <= 7) return 3.2;
+    if (totalAreaCm2 <= 8) return 3;
+    if (totalAreaCm2 <= 9) return 2.8;
+    if (totalAreaCm2 <= 10) return 2.6;
+    if (totalAreaCm2 <= 11) return 2.5;
+    if (totalAreaCm2 <= 12) return 2.4;
+    if (totalAreaCm2 <= 13) return 2.3;
+    if (totalAreaCm2 <= 14) return 2.15;
     if (totalAreaCm2 <= 16) return 2;
     if (totalAreaCm2 <= 25) return 1.8;
     if (totalAreaCm2 <= 36) return 1.6;
-    if (totalAreaCm2 <= 49) return 1.5;
+    if (totalAreaCm2 <= 49) return 1.4;
     if (totalAreaCm2 <= 64) return 1.2;
     if (totalAreaCm2 <= 81) return 1;
     if (totalAreaCm2 <= 100) return 0.8;
-    return 0.8;
+    return 0.7;
 }
 
 imageInput.addEventListener('change', function(e) {
@@ -982,7 +990,7 @@ function updateResult() {
             resultDetails.innerHTML += `
                 <div style="display: flex; align-items: center; margin-bottom: 5px;">
                     <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)} / Total (USD): $${totalPrice}</span>
+                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
                 </div>
             `;
         }
@@ -1055,7 +1063,7 @@ function checkPrice() {
             resultDetails.innerHTML += `
                 <div style="display: flex; align-items: center; margin-bottom: 5px;">
                     <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)} / Total (USD): $${totalPrice}</span>
+                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
                 </div>
             `;
         }
