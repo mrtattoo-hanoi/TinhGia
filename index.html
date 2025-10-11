@@ -295,13 +295,20 @@ priceModeInputs.forEach(input => {
 function getPricePerCm2(totalAreaCm2) {
     if (totalAreaCm2 < 6) return 3.5;
     if (totalAreaCm2 <= 7) return 3.2;
+    if (totalAreaCm2 <= 7.5) return 3.1;
     if (totalAreaCm2 <= 8) return 3;
+    if (totalAreaCm2 <= 8.5) return 2.9;
     if (totalAreaCm2 <= 9) return 2.8;
+    if (totalAreaCm2 <= 9.5) return 2.7;
     if (totalAreaCm2 <= 10) return 2.6;
+    if (totalAreaCm2 <= 10.5) return 2.55;
     if (totalAreaCm2 <= 11) return 2.5;
+    if (totalAreaCm2 <= 11.5) return 2.45;
     if (totalAreaCm2 <= 12) return 2.4;
+    if (totalAreaCm2 <= 12.5) return 2.35;
     if (totalAreaCm2 <= 13) return 2.3;
-    if (totalAreaCm2 <= 14) return 2.15;
+    if (totalAreaCm2 <= 13.5) return 2.2;
+    if (totalAreaCm2 <= 14) return 2.1;
     if (totalAreaCm2 <= 16) return 2;
     if (totalAreaCm2 <= 25) return 1.8;
     if (totalAreaCm2 <= 36) return 1.6;
