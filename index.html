@@ -143,16 +143,9 @@
             <label><input type="radio" name="priceMode" value="auto" checked> Tự động</label>
             <label><input type="radio" name="priceMode" value="manual"> Thủ công</label>
         </div>
-        <div id="manualPriceInput">
+        <div id="manualPriceInput" style="display: none;">
             <label>Price per cm² (USD): </label>
             <input type="number" id="pricePerCell" min="0" step="0.01" value="1">
-        </div>
-        <br>
-        <div style="font-style: italic; font-size: 14px; color: grey;">
-            1->25=0.8-1 | 26->100=0.6-0.8 | 101->199=0.5-0.7
-        </div>
-        <div style="font-style: italic; font-size: 14px; color: grey;">
-            200->299=0.45-0.6 | &gt;300=0.4-0.5
         </div>
         <div id="zoomContainer">
             <label>Thu phóng ảnh:</label><br>
@@ -203,20 +196,48 @@
                     <label><input type="radio" name="difficulty" value="medium"><span style="color: gold;">Vừa</span></label>
                     <label><input type="radio" name="difficulty" value="hard"><span style="color: orange;">Khó</span></label>
                     <label><input type="radio" name="difficulty" value="very_hard"><span style="color: red;">Rất khó</span></label>
-            <br><br>
-            <div id="selectMethodOptions">
+            <div id="selectMethodOptions" style="margin-top: 10px; display: none;">
                 </div>
                 <label><input type="radio" name="selectMethod" value="move" checked> Di chuyển chuột</label>
                 <label><input type="radio" name="selectMethod" value="drag"> Kéo để chọn</label>
             </div>
         </div>
+ <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 5px; margin-top: 10px;">
+        <label style="min-width: -10px;">Từ màu:</label>
+        <select id="fromColor" style="padding: 5px; border-radius: 4px;">
+            <option value="very_easy">🟢</option>
+            <option value="easy">🔵</option>
+            <option value="medium">🟡</option>
+            <option value="hard">🟠</option>
+            <option value="very_hard">🔴</option>
+        </select>
+        
+        <label style="min-width: -10px;">   Đổi thành:</label>
+        <select id="toColor" style="padding: 5px; border-radius: 4px;">
+            <option value="very_easy">🟢</option>
+            <option value="easy">🔵</option>
+            <option value="medium">🟡</option>
+            <option value="hard">🟠</option>
+            <option value="very_hard">🔴</option>
+        </select>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+        <button onclick="changeCellColor()" style="background: #ff6b6b; color: white; padding: 10px 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+            🔄 Đổi 1 màu
+        </button>
+        <button onclick="changeAllColor()" style="background: #ff9800; color: white; padding: 10px 10px; border: none; border-radius: 6px; cursor: pointer;">🎨 Đổi tất cả</button>
+    </div>
+<!-- THÊM DÒNG NÀY -->
+<div id="colorStats" style="margin-top: 10px; font-size: 14px; font-weight: bold; color: #333; padding: 5px; background: #f0f0f0; border-radius: 4px;"></div>
         <br>
         <div style="display: flex; gap: 10px; align-items: center;">
             <button onclick="createGrid()">Tạo lưới</button>
-            <div id="cropMode" style="display: none;">
+            <button onclick="autoSelect()" style="background: #4CAF50; color: white;">🤖 Chọn tự động</button>
+        </div>
+        <div id="cropMode" style="display: none;">
                 <button onclick="cropImage()">Cắt</button>
             </div>
-        </div>
         <br>
         <div id="imageContainer">
             <img id="displayImage" style="display: none;">
@@ -274,6 +295,10 @@ let originalWidthPx, originalHeightPx, aspectRatio;
 let cropData = null;
 let selectData = null;
 const ctx = gridCanvas.getContext('2d');
+// ← THÊM 3 DÒNG NÀY
+let cachedImageData = null;
+let cachedPixels = null;
+let cachedTimestamp = 0;
 
 const priceModeInputs = document.getElementsByName('priceMode');
 const manualPriceInput = document.getElementById('manualPriceInput');
@@ -292,31 +317,28 @@ priceModeInputs.forEach(input => {
     });
 });
 
-function getPricePerCm2(totalAreaCm2) {
-    if (totalAreaCm2 < 6) return 3.5;
-    if (totalAreaCm2 <= 7) return 3.2;
-    if (totalAreaCm2 <= 7.5) return 3.1;
-    if (totalAreaCm2 <= 8) return 3;
-    if (totalAreaCm2 <= 8.5) return 2.9;
-    if (totalAreaCm2 <= 9) return 2.8;
-    if (totalAreaCm2 <= 9.5) return 2.7;
-    if (totalAreaCm2 <= 10) return 2.6;
-    if (totalAreaCm2 <= 10.5) return 2.55;
-    if (totalAreaCm2 <= 11) return 2.5;
-    if (totalAreaCm2 <= 11.5) return 2.45;
-    if (totalAreaCm2 <= 12) return 2.4;
-    if (totalAreaCm2 <= 12.5) return 2.35;
-    if (totalAreaCm2 <= 13) return 2.3;
-    if (totalAreaCm2 <= 13.5) return 2.2;
-    if (totalAreaCm2 <= 14) return 2.1;
-    if (totalAreaCm2 <= 16) return 2;
-    if (totalAreaCm2 <= 25) return 1.8;
-    if (totalAreaCm2 <= 36) return 1.6;
-    if (totalAreaCm2 <= 49) return 1.4;
-    if (totalAreaCm2 <= 64) return 1.2;
-    if (totalAreaCm2 <= 81) return 1;
-    if (totalAreaCm2 <= 100) return 0.8;
-    return 0.7;
+function calculateBaseTotalPrice(totalAreaCm2) {
+    let giatien = 0;
+    const x = totalAreaCm2;
+
+    if (x < 6) {
+        giatien = 20 * ((x / 6) ** 1);
+        if (giatien < 10) giatien = 10;
+        else if (giatien < 15) giatien = 15;
+        else if (giatien < 20) giatien = 20;
+    } else if (x >= 6 && x <= 20) {
+        giatien = 20 * ((x / 6) ** 0.321928);
+    } else if (x > 20 && x <= 40) {
+        giatien = 29.47 * ((x / 20) ** 0.514573);
+   } else if (x > 40 && x <= 100) {
+        giatien = 42.1 * ((x / 40) ** 0.736966);
+    } else if (x > 100 && x <= 400) {
+        giatien = 82.7* ((x / 100) ** 0.514573);
+    } else if (x > 400) {
+        giatien = 196.93 * ((x / 400) ** 1);
+    }
+
+    return giatien;
 }
 
 imageInput.addEventListener('change', function(e) {
@@ -586,6 +608,7 @@ function createGrid() {
     });
 
     updateResult();
+updateColorStats();  // ← THÊM DÒNG NÀY
 }
 
 function getPositionFromEvent(e) {
@@ -862,6 +885,7 @@ function applyDragSelection() {
 
     selectData = null;
     createGrid();
+updateColorStats();  // ← THÊM DÒNG NÀY
 }
 
 function applyAreaSelection(row, col) {
@@ -889,6 +913,7 @@ function applyAreaSelection(row, col) {
         }
     }
     createGrid();
+updateColorStats();  // ← THÊM DÒNG NÀY
 }
 
 function formatVND(number) {
@@ -961,54 +986,48 @@ function updateResult() {
         areasByDifficulty[difficulty] += area;
     });
 
-    const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
-    let pricePerCm2;
-    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
-    if (priceMode === 'auto') {
-        pricePerCm2 = getPricePerCm2(totalAreaCm2);
-    } else {
-        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
+   const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
+let pricePerCm2;
+const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
+if (priceMode === 'auto') {
+    let baseTotalUSD = calculateBaseTotalPrice(totalAreaCm2);
+    pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalUSD / totalAreaCm2 : 0;
+} else {
+    pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
+}
+
+const priceAdjustments = {
+    very_easy: 1.0,   // Nguyên giá
+    easy: 1.25,       // +25%
+    medium: 1.5,      // +50%
+    hard: 1.75,       // +75%
+    very_hard: 2.0    // +100%
+};
+
+let totalPriceUSD = 0;
+const resultDetails = document.getElementById('resultDetails');
+resultDetails.innerHTML = '';
+
+for (const difficulty in areasByDifficulty) {
+    const area = areasByDifficulty[difficulty];
+    if (area > 0) {
+        const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
+        const totalPrice = (area * adjustedPrice).toFixed(2);
+        totalPriceUSD += parseFloat(totalPrice);
+
+        const color = difficulty === 'very_easy' ? 'limegreen' :
+                      difficulty === 'easy' ? 'blue' :
+                      difficulty === 'medium' ? 'gold' :
+                      difficulty === 'hard' ? 'orange' : 'red';
+
+        resultDetails.innerHTML += `
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
+                <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
+            </div>
+        `;
     }
-
-    const priceAdjustments = {
-        very_easy: 0,
-        easy: 0.1,
-        medium: 0.2,
-        hard: 0.3,
-        very_hard: 0.4
-    };
-
-    let totalPriceUSD = 0;
-    const resultDetails = document.getElementById('resultDetails');
-    resultDetails.innerHTML = '';
-
-    for (const difficulty in areasByDifficulty) {
-        const area = areasByDifficulty[difficulty];
-        if (area > 0) {
-            const adjustedPrice = pricePerCm2 + priceAdjustments[difficulty];
-            const totalPrice = (area * adjustedPrice).toFixed(2);
-            totalPriceUSD += parseFloat(totalPrice);
-
-            const color = difficulty === 'very_easy' ? 'limegreen' :
-                          difficulty === 'easy' ? 'blue' :
-                          difficulty === 'medium' ? 'gold' :
-                          difficulty === 'hard' ? 'orange' : 'red';
-
-            resultDetails.innerHTML += `
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
-                </div>
-            `;
-        }
-    }
-
-    // Adjust totalPriceUSD based on conditions
-    if (totalPriceUSD <= 10) {
-        totalPriceUSD = 10;
-    } else if (totalPriceUSD > 10 && totalPriceUSD < 15) {
-        totalPriceUSD = 15;
-    }
+}
 
     document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
     document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD.toFixed(2)}`;
@@ -1035,46 +1054,47 @@ function checkPrice() {
     });
 
     const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
-    let pricePerCm2;
-    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
-    if (priceMode === 'auto') {
-        pricePerCm2 = getPricePerCm2(totalAreaCm2);
-    } else {
-        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
+let pricePerCm2;
+const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
+if (priceMode === 'auto') {
+    let baseTotalUSD = calculateBaseTotalPrice(totalAreaCm2);
+    pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalUSD / totalAreaCm2 : 0;
+} else {
+    pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
+}
+
+const priceAdjustments = {
+    very_easy: 1.0,   // Nguyên giá
+    easy: 1.25,       // +25%
+    medium: 1.5,      // +50%
+    hard: 1.75,       // +75%
+    very_hard: 2.0    // +100%
+};
+
+let totalPriceUSD = 0;
+const resultDetails = document.getElementById('resultDetails');
+resultDetails.innerHTML = '';
+
+for (const difficulty in areasByDifficulty) {
+    const area = areasByDifficulty[difficulty];
+    if (area > 0) {
+        const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
+        const totalPrice = (area * adjustedPrice).toFixed(2);
+        totalPriceUSD += parseFloat(totalPrice);
+
+        const color = difficulty === 'very_easy' ? 'limegreen' :
+                      difficulty === 'easy' ? 'blue' :
+                      difficulty === 'medium' ? 'gold' :
+                      difficulty === 'hard' ? 'orange' : 'red';
+
+        resultDetails.innerHTML += `
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
+                <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
+            </div>
+        `;
     }
-
-    const priceAdjustments = {
-        very_easy: 0,
-        easy: 0.1,
-        medium: 0.2,
-        hard: 0.3,
-        very_hard: 0.4
-    };
-
-    let totalPriceUSD = 0;
-    const resultDetails = document.getElementById('resultDetails');
-    resultDetails.innerHTML = '';
-
-    for (const difficulty in areasByDifficulty) {
-        const area = areasByDifficulty[difficulty];
-        if (area > 0) {
-            const adjustedPrice = pricePerCm2 + priceAdjustments[difficulty];
-            const totalPrice = (area * adjustedPrice).toFixed(2);
-            totalPriceUSD += parseFloat(totalPrice);
-
-            const color = difficulty === 'very_easy' ? 'limegreen' :
-                          difficulty === 'easy' ? 'blue' :
-                          difficulty === 'medium' ? 'gold' :
-                          difficulty === 'hard' ? 'orange' : 'red';
-
-            resultDetails.innerHTML += `
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                    <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
-                </div>
-            `;
-        }
-    }
+}
 
     // Adjust totalPriceUSD based on conditions
     if (totalPriceUSD <= 10) {
@@ -1162,6 +1182,180 @@ function updateCursorOverlay(pos, row, col) {
 zoomSlider.addEventListener('input', function() {
     updateDimensions();
 });
+
+async function autoSelect() {
+    if (!displayImage.src || displayImage.style.display === 'none') {
+        alert('Vui lòng tải ảnh và tạo lưới trước!');
+        return;
+    }
+
+    const difficulty = Array.from(document.getElementsByName('difficulty')).find(input => input.checked)?.value || 'very_easy';
+    const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
+    
+    if (mode !== 'select') {
+        alert('Vui lòng chọn chế độ "Chọn ô" trước khi dùng tự động!');
+        return;
+    }
+
+    // CACHE IMAGE DATA - CHỈ TẠO 1 LẦN
+    if (!cachedImageData || cachedTimestamp < Date.now() - 1000) {
+        const canvas = document.createElement('canvas');
+        const tempCtx = canvas.getContext('2d');
+        canvas.width = originalWidthPx;
+        canvas.height = originalHeightPx;
+        tempCtx.drawImage(displayImage, 0, 0);
+        cachedImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+        cachedPixels = cachedImageData.data;
+        cachedTimestamp = Date.now();
+    }
+
+    const { totalWidthCells, totalHeightCells } = getCellCounts();
+    const { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm } = getGridPositions();
+    const pixelsPerCm = originalWidthPx / (parseFloat(widthMmInput.value) / 10);
+
+    selectedCellIndices = []; // Xóa lựa chọn cũ
+    selectedCells = 0;
+
+    // **DUYỆT TRỰC TIẾP - SIÊU NHANH**
+    for (let row = 0; row < totalHeightCells; row++) {
+        for (let col = 0; col < totalWidthCells; col++) {
+            const leftPx = (xPositions[col] / pixelPerCm) * pixelsPerCm;
+            const topPx = (yPositions[row] / pixelPerCm) * pixelsPerCm;
+            const widthPx = cellWidthsCm[col] * pixelsPerCm;
+            const heightPx = cellHeightsCm[row] * pixelsPerCm;
+
+            if (checkCellHasContentFast(
+                cachedPixels, originalWidthPx, originalHeightPx, 
+                Math.floor(leftPx), Math.floor(topPx), 
+                Math.floor(widthPx), Math.floor(heightPx)
+            )) {
+                selectedCellIndices.push([row, col, difficulty]);
+                selectedCells++;
+            }
+        }
+    }
+
+    createGrid();
+    updateResult();
+    updateColorStats();
+}
+
+// ← THAY THẾ HÀM CŨ BẰNG HÀM NÀY
+function checkCellHasContentFast(pixels, imgWidth, imgHeight, x, y, width, height) {
+    let contentPixels = 0;
+    let totalPixels = 0;
+    const step = 4; // Sample mỗi 4 pixel → NHANH GẤP 4X
+    
+    for (let dy = 0; dy < height; dy += step) {
+        for (let dx = 0; dx < width; dx += step) {
+            const py = y + dy;
+            const px = x + dx;
+            if (py >= imgHeight || px >= imgWidth) continue;
+            
+            const idx = (py * imgWidth + px) * 4;
+            totalPixels++;
+            
+            if (pixels[idx + 3] > 20) { // Alpha > 20
+                const r = pixels[idx];
+                const g = pixels[idx + 1];
+                const b = pixels[idx + 2];
+                
+                if (!(r > 240 && g > 240 && b > 240)) {
+                    contentPixels++;
+                }
+            }
+        }
+    }
+    
+    return (contentPixels / Math.max(totalPixels, 1)) > 0.08; // Giảm ngưỡng tí cho nhanh
+}
+
+// Cập nhật thống kê màu
+function updateColorStats() {
+    const stats = {
+        very_easy: 0, easy: 0, medium: 0, hard: 0, very_hard: 0
+    };
+    
+    selectedCellIndices.forEach(([row, col, difficulty]) => {
+        stats[difficulty]++;
+    });
+    
+    const statsDiv = document.getElementById('colorStats');
+    let html = '';
+    for (const [difficulty, count] of Object.entries(stats)) {
+        if (count > 0) {
+            const color = difficulty === 'very_easy' ? '🟢' :
+                         difficulty === 'easy' ? '🔵' :
+                         difficulty === 'medium' ? '🟡' :
+                         difficulty === 'hard' ? '🟠' : '🔴';
+            const label = difficulty === 'very_easy' ? 'Rất dễ' :
+                         difficulty === 'easy' ? 'Dễ' :
+                         difficulty === 'medium' ? 'Vừa' :
+                         difficulty === 'hard' ? 'Khó' : 'Rất khó';
+            html += `<span style="margin-right: 15px;">${color} ${label}: ${count} ô</span>`;
+        }
+    }
+    statsDiv.innerHTML = html || 'Chưa chọn ô nào';
+}
+
+// Hàm đổi màu ô
+function changeCellColor() {
+    const fromColor = document.getElementById('fromColor').value;
+    const toColor = document.getElementById('toColor').value;
+    
+    if (fromColor === toColor) {
+        alert('⚠️ Vui lòng chọn 2 màu khác nhau!');
+        return;
+    }
+    
+    const beforeCount = selectedCellIndices.filter(([_, __, diff]) => diff === fromColor).length;
+    if (beforeCount === 0) {
+        alert(`⚠️ Không có ô màu "${getDifficultyLabel(fromColor)}" để đổi!`);
+        return;
+    }
+    
+    selectedCellIndices = selectedCellIndices.map(([row, col, difficulty]) => 
+        difficulty === fromColor ? [row, col, toColor] : [row, col, difficulty]
+    );
+    
+    createGrid();
+    updateResult();
+    updateColorStats();
+}
+
+// Hàm chọn tất cả ô của 1 màu
+// ĐỔI TẤT CẢ MÀU - GIỮ NGUYÊN SỐ Ô!
+function changeAllColor() {
+    if (selectedCells === 0) {
+        alert('⚠️ Chưa chọn ô nào để đổi màu!');
+        return;
+    }
+    
+    const newColor = document.getElementById('toColor').value;
+    
+    const beforeCount = selectedCells;
+    
+    // CHỈ ĐỔI MÀU - KHÔNG XÓA Ô NÀO!
+    selectedCellIndices = selectedCellIndices.map(([row, col, _]) => 
+        [row, col, newColor]  // Giữ nguyên vị trí, đổi màu
+    );
+    
+    createGrid();
+    updateResult();
+    updateColorStats();
+}
+
+// Hàm hỗ trợ lấy tên màu
+function getDifficultyLabel(difficulty) {
+    const labels = {
+        very_easy: 'Rất dễ',
+        easy: 'Dễ', 
+        medium: 'Vừa',
+        hard: 'Khó',
+        very_hard: 'Rất khó'
+    };
+    return labels[difficulty] || difficulty;
+}
     </script>
 </body>
 </html>
