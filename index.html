@@ -15,7 +15,15 @@
         #imageContainer {
             position: relative;
             display: inline-block;
+            max-width: 100%;
         }
+
+#displayImage,
+#gridCanvas,
+#drawCanvas {
+    max-width: 100%;
+    height: auto;
+}
         #gridCanvas {
             position: absolute;
             top: 0;
@@ -528,8 +536,16 @@ function updateDimensions() {
         return;
     }
 
-    // ===== LUÔN CỐ ĐỊNH CHIỀU NGANG CƠ SỞ = 600px =====
-    const baseDisplayWidth = 600;
+    // ===== LẤY CHIỀU RỘNG THỰC TẾ CÓ THỂ DÙNG =====
+    // Trừ đi padding/margin để không bị tràn màn hình
+    const availableWidth = Math.min(
+        window.innerWidth - 40,          // trừ margin 2 bên
+        document.body.clientWidth - 40
+    );
+
+    // Cơ sở: không bao giờ vượt quá màn hình, tối đa 600px trên máy tính
+    const baseDisplayWidth = Math.min(600, availableWidth);
+
     let widthPx = baseDisplayWidth * zoom;
     let heightPx = (baseDisplayWidth / aspectRatio) * zoom;
 
@@ -539,13 +555,13 @@ function updateDimensions() {
     gridCanvas.width = widthPx;
     gridCanvas.height = heightPx;
 
-    // Đồng bộ canvas vẽ vùng (nếu có)
+    // Đồng bộ canvas vẽ vùng
     if (typeof drawCanvas !== 'undefined' && drawCanvas) {
         drawCanvas.width = widthPx;
         drawCanvas.height = heightPx;
     }
 
-    // Nếu đang crop thì giới hạn khung crop
+    // Giới hạn khung crop nếu đang crop
     if (isCropping && cropData) {
         cropOverlay.style.width = `${Math.min(cropData.width, widthPx)}px`;
         cropOverlay.style.height = `${Math.min(cropData.height, heightPx)}px`;
@@ -553,7 +569,6 @@ function updateDimensions() {
         cropData.height = Math.min(cropData.height, heightPx);
     }
 
-    // Vẫn tạo lại lưới nếu không đang crop
     if (!isCropping) {
         createGrid();
     }
