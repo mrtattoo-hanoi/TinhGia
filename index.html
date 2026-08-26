@@ -144,8 +144,8 @@
             <label><input type="radio" name="priceMode" value="manual"> Thủ công</label>
         </div>
         <div id="manualPriceInput" style="display: none;">
-            <label>Price per cm² (USD): </label>
-            <input type="number" id="pricePerCell" min="0" step="0.01" value="1">
+            <label>Giá mỗi cm² (VNĐ): </label>
+<input type="number" id="pricePerCell" min="0" step="1000" value="50000">
         </div>
         <div id="zoomContainer">
             <label>Thu phóng ảnh:</label><br>
@@ -187,9 +187,10 @@
             </select>
         </div>
         <div id="selectionMode">
+            <label><input type="radio" name="mode" value="drawRegion"> Vẽ vùng chọn</label>
             <label><input type="radio" name="mode" value="select" checked> Chọn ô</label>
             <label><input type="radio" name="mode" value="deselect"> Xóa ô</label>   
-            <label><input type="radio" name="mode" value="crop"> Cắt ảnh</label> 
+            <label><input type="radio" name="mode" value="crop"> Cắt ảnh</label>    
 <div id="difficultyOptions" style="margin-top: 10px; display: none;">
                     <label><input type="radio" name="difficulty" value="very_easy" checked><span style="color: limegreen;">Rất dễ</span></label>
                     <label><input type="radio" name="difficulty" value="easy"><span style="color: blue;">Dễ</span></label>
@@ -231,10 +232,18 @@
 <!-- THÊM DÒNG NÀY -->
 <div id="colorStats" style="margin-top: 10px; font-size: 14px; font-weight: bold; color: #333; padding: 5px; background: #f0f0f0; border-radius: 4px;"></div>
         <br>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button onclick="createGrid()">Tạo lưới</button>
-            <button onclick="autoSelect()" style="background: #4CAF50; color: white;">🤖 Chọn tự động</button>
-        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    <button onclick="createGrid()">Tạo lưới</button>
+    <button onclick="autoSelect()" style="background: #4CAF50; color: white;">🤖 Chọn tự động</button>
+    
+    <!-- THÊM 2 NÚT MỚI TẠI ĐÂY -->
+    <button id="confirmRegionBtn" onclick="confirmDrawnRegion()" style="display:none; background:#2196F3; color:white; padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">
+        ✓ Xác nhận vùng
+    </button>
+    <button id="clearRegionBtn" onclick="clearDrawnRegion()" style="display:none; background:#f44336; color:white; padding:8px 14px; border:none; border-radius:6px; cursor:pointer;">
+        ✕ Xóa vùng vẽ
+    </button>
+</div>
         <div id="cropMode" style="display: none;">
                 <button onclick="cropImage()">Cắt</button>
             </div>
@@ -254,13 +263,15 @@
                 <div class="resize-handle left"></div>
             </div>
             <div id="selectOverlay"></div>
+<!-- THÊM CANVAS VẼ VÙNG TẠI ĐÂY -->
+    <canvas id="drawCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></canvas>
         </div>
         <div id="totalArea" style="font-weight: bold;">Total area: 0 cm² (0 cells)</div>
         <div id="resultDetails" style="margin-top: 10px;"></div>
-        <div id="totalPrice" style="font-weight: bold;">Total amount (USD): $0</div>
-        <div id="resultVND"></div>
-        <div id="resultEUR"></div>
-        <div id="exchangeRate"></div>
+        <div id="totalPrice" style="font-weight: bold;">Tổng tiền (VNĐ): 0 ₫</div>
+<div id="resultUSD"></div>
+<div id="resultEUR"></div>
+<div id="exchangeRate"></div>
         <br>
         <button onclick="checkPrice()">Check Price</button>
     </div>
@@ -300,6 +311,12 @@ let cachedImageData = null;
 let cachedPixels = null;
 let cachedTimestamp = 0;
 
+let isDrawingRegion = false;
+let drawPoints = [];          // mảng điểm {x, y}
+let isDrawing = false;
+const drawCanvas = document.getElementById('drawCanvas');
+const drawCtx = drawCanvas.getContext('2d');
+
 const priceModeInputs = document.getElementsByName('priceMode');
 const manualPriceInput = document.getElementById('manualPriceInput');
 
@@ -317,28 +334,29 @@ priceModeInputs.forEach(input => {
     });
 });
 
-function calculateBaseTotalPrice(totalAreaCm2) {
-    let giatien = 0;
-    const x = totalAreaCm2;
-
-    if (x < 6) {
-        giatien = 20 * ((x / 6) ** 1);
-        if (giatien < 10) giatien = 10;
-        else if (giatien < 15) giatien = 15;
-        else if (giatien < 20) giatien = 20;
-    } else if (x >= 6 && x <= 20) {
-        giatien = 20 * ((x / 6) ** 0.321928);
-    } else if (x > 20 && x <= 40) {
-        giatien = 29.47 * ((x / 20) ** 0.514573);
-   } else if (x > 40 && x <= 100) {
-        giatien = 42.1 * ((x / 40) ** 0.736966);
-    } else if (x > 100 && x <= 400) {
-        giatien = 82.7* ((x / 100) ** 0.514573);
-    } else if (x > 400) {
-        giatien = 196.93 * ((x / 400) ** 1);
+function tinhGiaXam(x) {
+    // x: diện tích tính bằng cm²
+    // Giá trả về đơn vị: VNĐ
+    
+    let giaK; // Giá tính theo nghìn đồng (k VND)
+    if (x <= 2) {
+        // Mốc min: dưới hoặc bằng 2 cm² tính 300k
+        giaK = 300;
+    } 
+    else if (x > 2 && x <= 4) {
+        // Nội suy mượt từ 2cm² (300k) lên 4cm² (400k)
+        giaK = 300 + (x - 2) * 50;
+    } 
+    else if (x > 4 && x <= 30) {
+        // Đoạn từ 4cm² đến 30cm² (đạt 800k ở 10cm² và 1500k ở 30cm²)
+        giaK = 400 * Math.pow(x / 4, 0.61316);
+    } 
+    else {
+        // Đoạn > 30cm² (đạt 6000k ở 300cm² và 9000k ở 600cm²)
+        giaK = 1500 * Math.pow(x / 30, 0.59828);
     }
-
-    return giatien;
+    // Nhân với 1000 và làm tròn đến hàng nghìn VNĐ
+    return Math.round(giaK) * 1000;
 }
 
 imageInput.addEventListener('change', function(e) {
@@ -403,12 +421,40 @@ selectionModeInputs.forEach(input => {
         isSelecting = false;
         isResizing = false;
         isCropping = input.value === 'crop';
+        isDrawingRegion = input.value === 'drawRegion';
+        isDrawing = false;
+        drawPoints = [];
+
         cursorOverlay.style.display = 'none';
         selectOverlay.style.display = 'none';
         cropModeDiv.style.display = isCropping ? 'block' : 'none';
-        document.getElementById('selectMethodOptions').style.display = isCropping ? 'none' : 'block';
-        document.getElementById('difficultyOptions').style.display = input.value === 'select' ? 'block' : 'none';
-        
+
+        // Hiện / ẩn nút
+        document.getElementById('confirmRegionBtn').style.display = isDrawingRegion ? 'inline-block' : 'none';
+        document.getElementById('clearRegionBtn').style.display = isDrawingRegion ? 'inline-block' : 'none';
+
+        // Hiện độ khó khi chọn ô hoặc vẽ vùng
+        document.getElementById('difficultyOptions').style.display = 
+            (input.value === 'select' || input.value === 'drawRegion') ? 'block' : 'none';
+
+        document.getElementById('selectMethodOptions').style.display = 
+            (isCropping || isDrawingRegion) ? 'none' : 'block';
+
+        // ===== Xử lý canvas vẽ =====
+        if (isDrawingRegion) {
+            // Đảm bảo canvas có đúng kích thước
+            drawCanvas.width = gridCanvas.width || imageContainer.clientWidth;
+            drawCanvas.height = gridCanvas.height || imageContainer.clientHeight;
+            drawCanvas.style.pointerEvents = 'auto';
+            drawCanvas.style.zIndex = '20';          // đưa lên trên cùng
+            clearDrawnRegion();
+            console.log('Đã bật chế độ Vẽ vùng. Canvas size:', drawCanvas.width, 'x', drawCanvas.height);
+        } else {
+            drawCanvas.style.pointerEvents = 'none';
+            drawCanvas.style.zIndex = '5';
+            clearDrawnRegion();
+        }
+
         if (isCropping && displayImage.src && displayImage.style.display !== 'none') {
             const containerRect = imageContainer.getBoundingClientRect();
             cropOverlay.style.display = 'block';
@@ -427,7 +473,7 @@ selectionModeInputs.forEach(input => {
             cropData = null;
         }
         
-        if (!isCropping) {
+        if (!isCropping && !isDrawingRegion) {
             createGrid();
         }
     });
@@ -476,45 +522,40 @@ function getCellCounts() {
 }
 
 function updateDimensions() {
-    const zoom = parseFloat(zoomSlider.value);
-    let widthPx, heightPx;
+    const zoom = parseFloat(zoomSlider.value) || 1;
 
     if (!originalWidthPx || !originalHeightPx || isNaN(originalWidthPx) || isNaN(originalHeightPx)) {
         return;
     }
 
-    const defaultDisplayWidth = 500;
-    if (widthMmInput.value && aspectRatio) {
-        const widthMm = parseFloat(widthMmInput.value);
-        const heightMm = widthMm / aspectRatio;
-        heightMmInput.value = heightMm.toFixed(2);
-        widthPx = widthMm * 3.779527559 * zoom;
-        heightPx = heightMm * 3.779527559 * zoom;
-    } else if (heightMmInput.value && aspectRatio) {
-        const heightMm = parseFloat(heightMmInput.value);
-        const widthMm = heightMm * aspectRatio;
-        widthMmInput.value = widthMm.toFixed(2);
-        widthPx = widthMm * 3.779527559 * zoom;
-        heightPx = heightMm * 3.779527559 * zoom;
-    } else {
-        widthPx = defaultDisplayWidth * zoom;
-        heightPx = (defaultDisplayWidth / aspectRatio) * zoom;
-        widthMmInput.value = (widthPx / 3.779527559 / zoom).toFixed(2);
-        heightMmInput.value = (heightPx / 3.779527559 / zoom).toFixed(2);
-    }
+    // ===== LUÔN CỐ ĐỊNH CHIỀU NGANG CƠ SỞ = 600px =====
+    const baseDisplayWidth = 600;
+    let widthPx = baseDisplayWidth * zoom;
+    let heightPx = (baseDisplayWidth / aspectRatio) * zoom;
 
+    // Gán kích thước hiển thị
     displayImage.style.width = `${widthPx}px`;
     displayImage.style.height = `${heightPx}px`;
     gridCanvas.width = widthPx;
     gridCanvas.height = heightPx;
 
-    if (!isCropping) {
-        createGrid();
-    } else if (cropData) {
+    // Đồng bộ canvas vẽ vùng (nếu có)
+    if (typeof drawCanvas !== 'undefined' && drawCanvas) {
+        drawCanvas.width = widthPx;
+        drawCanvas.height = heightPx;
+    }
+
+    // Nếu đang crop thì giới hạn khung crop
+    if (isCropping && cropData) {
         cropOverlay.style.width = `${Math.min(cropData.width, widthPx)}px`;
         cropOverlay.style.height = `${Math.min(cropData.height, heightPx)}px`;
         cropData.width = Math.min(cropData.width, widthPx);
         cropData.height = Math.min(cropData.height, heightPx);
+    }
+
+    // Vẫn tạo lại lưới nếu không đang crop
+    if (!isCropping) {
+        createGrid();
     }
 }
 
@@ -575,6 +616,11 @@ function createGrid() {
 
     ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
 
+if (drawCanvas) {
+    drawCanvas.width = gridCanvas.width;
+    drawCanvas.height = gridCanvas.height;
+}
+
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= totalWidthCells; i++) {
@@ -631,6 +677,12 @@ function handleStart(e) {
     e.preventDefault();
     if (!displayImage.src || displayImage.style.display === 'none') return;
 
+    // ===== CHẾ ĐỘ VẼ VÙNG =====
+    if (isDrawingRegion) {
+        startDrawRegion(e);
+        return;
+    }
+
     const pos = getPositionFromEvent(e);
     const target = e.target;
 
@@ -652,10 +704,8 @@ function handleStart(e) {
         selectData = { startX, startY, width: 0, height: 0 };
     } else if (!isCropping && !isDragging) {
         isSelecting = true;
-        const pos = getPositionFromEvent(e);
         const { totalWidthCells, totalHeightCells } = getCellCounts();
         const { xPositions, yPositions } = getGridPositions();
-
         let col = 0, row = 0;
         for (let i = 0; i < totalWidthCells; i++) {
             if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
@@ -669,7 +719,6 @@ function handleStart(e) {
                 break;
             }
         }
-
         if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
             applyAreaSelection(row, col);
             updateCursorOverlay(pos, row, col);
@@ -682,12 +731,19 @@ function handleMove(e) {
     e.preventDefault();
     if (!displayImage.src || displayImage.style.display === 'none') return;
 
+    // ===== CHẾ ĐỘ VẼ VÙNG =====
+    if (isDrawingRegion) {
+        moveDrawRegion(e);
+        return;
+    }
+
     const pos = getPositionFromEvent(e);
     const containerRect = imageContainer.getBoundingClientRect();
     const endX = Math.min(Math.max(pos.x, 0), containerRect.width);
     const endY = Math.min(Math.max(pos.y, 0), containerRect.height);
 
     if (isCropping && isResizing && cropData) {
+        // ... giữ nguyên phần resize crop của bạn
         let { startX, startY, width, height } = cropData;
         switch (resizeHandle) {
             case 'top-left':
@@ -743,18 +799,14 @@ function handleMove(e) {
         const top = Math.min(startY, endY);
         const width = Math.abs(endX - startX);
         const height = Math.abs(endY - startY);
-
         selectOverlay.style.left = `${left}px`;
         selectOverlay.style.top = `${top}px`;
         selectOverlay.style.width = `${width}px`;
         selectOverlay.style.height = `${height}px`;
-
         selectData = { startX: left, startY: top, width, height };
     } else if (!isCropping && !isDragging && isSelecting) {
-        const pos = getPositionFromEvent(e);
         const { totalWidthCells, totalHeightCells } = getCellCounts();
         const { xPositions, yPositions } = getGridPositions();
-
         let col = 0, row = 0;
         for (let i = 0; i < totalWidthCells; i++) {
             if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
@@ -768,7 +820,6 @@ function handleMove(e) {
                 break;
             }
         }
-
         if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
             applyAreaSelection(row, col);
             updateCursorOverlay(pos, row, col);
@@ -778,11 +829,17 @@ function handleMove(e) {
 }
 
 function handleEnd(e) {
+    // ===== CHẾ ĐỘ VẼ VÙNG =====
+    if (isDrawingRegion) {
+        endDrawRegion(e);
+        return;
+    }
+
     if (isCropping && isResizing) {
         isResizing = false;
         resizeHandle = null;
         if (cropData && cropData.width > 0 && cropData.height > 0) {
-            // Giữ khung cắt hiển thị để tiếp tục điều chỉnh
+            // giữ khung
         } else {
             cropOverlay.style.display = 'none';
             cropData = null;
@@ -920,54 +977,51 @@ function formatVND(number) {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-function updateCurrencyConversion(totalPriceUSD) {
-    const resultVND = document.getElementById('resultVND');
+function updateCurrencyConversion(totalPriceVND) {
+    const resultUSD = document.getElementById('resultUSD') || document.getElementById('resultVND');
     const resultEUR = document.getElementById('resultEUR');
     const exchangeRate = document.getElementById('exchangeRate');
     
-    const defaultVndRate = 25300;
-    const defaultEurRate = 0.92;
-
+    const defaultUsdRate = 25300;   // 1 USD = ? VND
+    const defaultEurRate = 27500;   // 1 EUR = ? VND
     const apiUrl = 'https://open.er-api.com/v6/latest/USD';
 
     fetch(apiUrl)
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return response.json();
         })
         .then(data => {
             if (data.result === 'success' && data.rates) {
-                const vndRate = data.rates.VND || defaultVndRate;
-                const eurRate = 1 / data.rates.EUR || defaultEurRate;
-                const totalPriceVND = (totalPriceUSD * vndRate).toFixed(0);
-                const totalPriceEUR = (totalPriceUSD / eurRate).toFixed(2);
-                resultVND.textContent = `Total amount (VND): ${formatVND(totalPriceVND)} VND`;
-                resultEUR.textContent = `Total amount (EUR): €${totalPriceEUR}`;
-                exchangeRate.textContent = `Exchange rate: 1 USD = ${formatVND(vndRate.toFixed(0))} VND | 1 EUR ≈ ${formatVND((vndRate / (1/eurRate)).toFixed(0))} VND`;
+                const usdToVnd = data.rates.VND || defaultUsdRate;
+                const eurToVnd = data.rates.VND / data.rates.EUR || defaultEurRate;
+
+                const totalUSD = (totalPriceVND / usdToVnd).toFixed(2);
+                const totalEUR = (totalPriceVND / eurToVnd).toFixed(2);
+
+                if (resultUSD) resultUSD.textContent = `≈ $${totalUSD} USD`;
+                resultEUR.textContent = `≈ €${totalEUR} EUR`;
+                exchangeRate.textContent = `Tỷ giá: 1 USD ≈ ${formatVND(Math.round(usdToVnd))} ₫ | 1 EUR ≈ ${formatVND(Math.round(eurToVnd))} ₫`;
             } else {
-                console.error('API error:', data.error || 'Unknown error from open.er-api');
-                useDefaultRates(totalPriceUSD, defaultVndRate, defaultEurRate);
+                useDefaultRates(totalPriceVND, defaultUsdRate, defaultEurRate);
             }
         })
         .catch(error => {
             console.error('Lỗi khi lấy tỉ giá:', error.message);
-            useDefaultRates(totalPriceUSD, defaultVndRate, defaultEurRate);
+            useDefaultRates(totalPriceVND, defaultUsdRate, defaultEurRate);
         });
 
-    function useDefaultRates(totalPriceUSD, vndRate, eurRate) {
-        const totalPriceVND = (totalPriceUSD * vndRate).toFixed(0);
-        const totalPriceEUR = (totalPriceUSD / eurRate).toFixed(2);
-        resultVND.textContent = `Total amount (VND): ${formatVND(totalPriceVND)} VND (tỷ giá mặc định)`;
-        resultEUR.textContent = `Total amount (EUR): €${totalPriceEUR} (tỷ giá mặc định)`;
-        exchangeRate.textContent = `Exchange rate: Lỗi API - Dùng mặc định (1 USD = ${formatVND(vndRate)} VND | 1 USD ≈ ${eurRate} EUR)`;
+    function useDefaultRates(totalPriceVND, usdRate, eurRate) {
+        const totalUSD = (totalPriceVND / usdRate).toFixed(2);
+        const totalEUR = (totalPriceVND / eurRate).toFixed(2);
+        if (resultUSD) resultUSD.textContent = `≈ $${totalUSD} USD (tỷ giá mặc định)`;
+        resultEUR.textContent = `≈ €${totalEUR} EUR (tỷ giá mặc định)`;
+        exchangeRate.textContent = `Tỷ giá mặc định: 1 USD = ${formatVND(usdRate)} ₫ | 1 EUR = ${formatVND(eurRate)} ₫`;
     }
 }
 
 function updateResult() {
     const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
-
     const cellWidthsCm = Array(totalWidthCells).fill(xyz);
     if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
     const cellHeightsCm = Array(totalHeightCells).fill(xyz);
@@ -986,51 +1040,56 @@ function updateResult() {
         areasByDifficulty[difficulty] += area;
     });
 
-   const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
-let pricePerCm2;
-const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
-if (priceMode === 'auto') {
-    let baseTotalUSD = calculateBaseTotalPrice(totalAreaCm2);
-    pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalUSD / totalAreaCm2 : 0;
-} else {
-    pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
-}
+    const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
 
-const priceAdjustments = {
-    very_easy: 1.0,   // Nguyên giá
-    easy: 1.25,       // +25%
-    medium: 1.5,      // +50%
-    hard: 1.75,       // +75%
-    very_hard: 2.0    // +100%
-};
+    let pricePerCm2;
+    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
 
-let totalPriceUSD = 0;
-const resultDetails = document.getElementById('resultDetails');
-resultDetails.innerHTML = '';
-
-for (const difficulty in areasByDifficulty) {
-    const area = areasByDifficulty[difficulty];
-    if (area > 0) {
-        const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
-        const totalPrice = (area * adjustedPrice).toFixed(2);
-        totalPriceUSD += parseFloat(totalPrice);
-
-        const color = difficulty === 'very_easy' ? 'limegreen' :
-                      difficulty === 'easy' ? 'blue' :
-                      difficulty === 'medium' ? 'gold' :
-                      difficulty === 'hard' ? 'orange' : 'red';
-
-        resultDetails.innerHTML += `
-            <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
-            </div>
-        `;
+    if (priceMode === 'auto') {
+        const baseTotalVND = tinhGiaXam(totalAreaCm2);
+        pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalVND / totalAreaCm2 : 0;
+    } else {
+        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
     }
-}
+
+    const priceAdjustments = {
+        very_easy: 1.0,   // Nguyên giá
+        easy: 1.25,       // +25%
+        medium: 1.5,      // +50%
+        hard: 1.75,       // +75%
+        very_hard: 2.0    // +100%
+    };
+
+    let totalPriceVND = 0;
+    const resultDetails = document.getElementById('resultDetails');
+    resultDetails.innerHTML = '';
+
+    for (const difficulty in areasByDifficulty) {
+        const area = areasByDifficulty[difficulty];
+        if (area > 0) {
+            const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
+            const totalPrice = area * adjustedPrice;
+            totalPriceVND += totalPrice;
+
+            const color = difficulty === 'very_easy' ? 'limegreen' :
+                          difficulty === 'easy' ? 'blue' :
+                          difficulty === 'medium' ? 'gold' :
+                          difficulty === 'hard' ? 'orange' : 'red';
+
+            resultDetails.innerHTML += `
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
+                    <span>${area.toFixed(2)} cm² / Giá/cm²: ${formatVND(Math.round(adjustedPrice))} ₫</span>
+                </div>
+            `;
+        }
+    }
+
+    // Làm tròn đến hàng nghìn
+    totalPriceVND = Math.round(totalPriceVND / 1000) * 1000;
 
     document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
-    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD.toFixed(2)}`;
+    document.getElementById('totalPrice').textContent = `Tổng tiền (VNĐ): ${formatVND(totalPriceVND)} ₫`;
 }
 
 function checkPrice() {
@@ -1054,58 +1113,60 @@ function checkPrice() {
     });
 
     const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
-let pricePerCm2;
-const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
-if (priceMode === 'auto') {
-    let baseTotalUSD = calculateBaseTotalPrice(totalAreaCm2);
-    pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalUSD / totalAreaCm2 : 0;
-} else {
-    pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
-}
 
-const priceAdjustments = {
-    very_easy: 1.0,   // Nguyên giá
-    easy: 1.25,       // +25%
-    medium: 1.5,      // +50%
-    hard: 1.75,       // +75%
-    very_hard: 2.0    // +100%
-};
+    let pricePerCm2;
+    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
 
-let totalPriceUSD = 0;
-const resultDetails = document.getElementById('resultDetails');
-resultDetails.innerHTML = '';
-
-for (const difficulty in areasByDifficulty) {
-    const area = areasByDifficulty[difficulty];
-    if (area > 0) {
-        const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
-        const totalPrice = (area * adjustedPrice).toFixed(2);
-        totalPriceUSD += parseFloat(totalPrice);
-
-        const color = difficulty === 'very_easy' ? 'limegreen' :
-                      difficulty === 'easy' ? 'blue' :
-                      difficulty === 'medium' ? 'gold' :
-                      difficulty === 'hard' ? 'orange' : 'red';
-
-        resultDetails.innerHTML += `
-            <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                <span>${area.toFixed(2)} cm² / Price per cm²: $${adjustedPrice.toFixed(2)}</span>
-            </div>
-        `;
+    if (priceMode === 'auto') {
+        const baseTotalVND = tinhGiaXam(totalAreaCm2);
+        pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalVND / totalAreaCm2 : 0;
+    } else {
+        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
     }
-}
 
-    // Adjust totalPriceUSD based on conditions
-    if (totalPriceUSD <= 10) {
-        totalPriceUSD = 10;
-    } else if (totalPriceUSD > 10 && totalPriceUSD < 15) {
-        totalPriceUSD = 15;
+    const priceAdjustments = {
+        very_easy: 1.0,
+        easy: 1.25,
+        medium: 1.5,
+        hard: 1.75,
+        very_hard: 2.0
+    };
+
+    let totalPriceVND = 0;
+    const resultDetails = document.getElementById('resultDetails');
+    resultDetails.innerHTML = '';
+
+    for (const difficulty in areasByDifficulty) {
+        const area = areasByDifficulty[difficulty];
+        if (area > 0) {
+            const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
+            const totalPrice = area * adjustedPrice;
+            totalPriceVND += totalPrice;
+
+            const color = difficulty === 'very_easy' ? 'limegreen' :
+                          difficulty === 'easy' ? 'blue' :
+                          difficulty === 'medium' ? 'gold' :
+                          difficulty === 'hard' ? 'orange' : 'red';
+
+            resultDetails.innerHTML += `
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
+                    <span>${area.toFixed(2)} cm² / Giá/cm²: ${formatVND(Math.round(adjustedPrice))} ₫</span>
+                </div>
+            `;
+        }
     }
+
+    // Làm tròn đến hàng nghìn
+    totalPriceVND = Math.round(totalPriceVND / 1000) * 1000;
+
+    // (Tùy chọn) Giữ logic min giá nếu cần – ví dụ min 250.000₫
+    // if (totalPriceVND < 250000) totalPriceVND = 250000;
 
     document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
-    document.getElementById('totalPrice').textContent = `Total amount (USD): $${totalPriceUSD.toFixed(2)}`;
-    updateCurrencyConversion(totalPriceUSD);
+    document.getElementById('totalPrice').textContent = `Tổng tiền (VNĐ): ${formatVND(totalPriceVND)} ₫`;
+
+    updateCurrencyConversion(totalPriceVND);
 }
 
 imageContainer.addEventListener('mousedown', handleStart);
@@ -1356,6 +1417,135 @@ function getDifficultyLabel(difficulty) {
     };
     return labels[difficulty] || difficulty;
 }
+
+// Bắt đầu vẽ
+function startDrawRegion(e) {
+    if (!isDrawingRegion) return;
+    isDrawing = true;
+    drawPoints = [];
+    const pos = getPositionFromEvent(e);
+    drawPoints.push(pos);
+
+    // Đảm bảo canvas đúng size
+    if (drawCanvas.width !== gridCanvas.width || drawCanvas.height !== gridCanvas.height) {
+        drawCanvas.width = gridCanvas.width;
+        drawCanvas.height = gridCanvas.height;
+    }
+
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    drawCtx.beginPath();
+    drawCtx.moveTo(pos.x, pos.y);
+    drawCtx.strokeStyle = '#00aaff';
+    drawCtx.lineWidth = 4;
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+}
+
+function moveDrawRegion(e) {
+    if (!isDrawingRegion || !isDrawing) return;
+    const pos = getPositionFromEvent(e);
+    drawPoints.push(pos);
+
+    drawCtx.lineTo(pos.x, pos.y);
+    drawCtx.stroke();
+}
+
+function endDrawRegion(e) {
+    if (!isDrawingRegion || !isDrawing) return;
+    isDrawing = false;
+
+    if (drawPoints.length > 8) {
+        const first = drawPoints[0];
+        const last = drawPoints[drawPoints.length - 1];
+        const dist = Math.hypot(first.x - last.x, first.y - last.y);
+
+        if (dist < 50) {
+            // Đóng vòng và tô màu nhẹ
+            drawCtx.lineTo(first.x, first.y);
+            drawCtx.closePath();
+            drawCtx.stroke();
+            drawCtx.fillStyle = 'rgba(0, 170, 255, 0.2)';
+            drawCtx.fill();
+        }
+    }
+}
+
+// Xóa vùng đang vẽ
+function clearDrawnRegion() {
+    drawPoints = [];
+    isDrawing = false;
+    if (drawCtx) {
+        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+}
+
+// Kiểm tra điểm có nằm trong polygon không (ray-casting)
+function isPointInPolygon(point, polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+        
+        const intersect = ((yi > point.y) !== (yj > point.y)) &&
+            (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// Xác nhận vùng → chọn tất cả ô nằm bên trong
+function confirmDrawnRegion() {
+    if (drawPoints.length < 10) {
+        alert('Vùng vẽ quá nhỏ hoặc chưa vẽ! Hãy vẽ một vòng kín quanh vùng cần chọn.');
+        return;
+    }
+
+    const difficulty = Array.from(document.getElementsByName('difficulty'))
+        .find(input => input.checked)?.value || 'very_easy';
+
+    const { totalWidthCells, totalHeightCells } = getCellCounts();
+    const { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm } = getGridPositions();
+
+    let added = 0;
+
+    for (let row = 0; row < totalHeightCells; row++) {
+        for (let col = 0; col < totalWidthCells; col++) {
+            // Lấy tâm của ô
+            const centerX = xPositions[col] + (cellWidthsCm[col] * pixelPerCm) / 2;
+            const centerY = yPositions[row] + (cellHeightsCm[row] * pixelPerCm) / 2;
+
+            if (isPointInPolygon({ x: centerX, y: centerY }, drawPoints)) {
+                // Chỉ thêm nếu chưa có
+                if (!selectedCellIndices.some(([r, c]) => r === row && c === col)) {
+                    selectedCellIndices.push([row, col, difficulty]);
+                    selectedCells++;
+                    added++;
+                } else {
+                    // Cập nhật độ khó nếu đã tồn tại
+                    selectedCellIndices = selectedCellIndices.map(item =>
+                        item[0] === row && item[1] === col ? [row, col, difficulty] : item
+                    );
+                }
+            }
+        }
+    }
+
+    createGrid();
+    updateResult();
+    updateColorStats();
+    clearDrawnRegion();
+
+    alert(`Đã chọn thêm ${added} ô nằm trong vùng vẽ!`);
+}
+// Sự kiện vẽ vùng
+drawCanvas.addEventListener('mousedown', startDrawRegion);
+drawCanvas.addEventListener('mousemove', moveDrawRegion);
+drawCanvas.addEventListener('mouseup', endDrawRegion);
+drawCanvas.addEventListener('mouseleave', endDrawRegion);
+
+drawCanvas.addEventListener('touchstart', startDrawRegion, { passive: false });
+drawCanvas.addEventListener('touchmove', moveDrawRegion, { passive: false });
+drawCanvas.addEventListener('touchend', endDrawRegion, { passive: false });
     </script>
 </body>
 </html>
