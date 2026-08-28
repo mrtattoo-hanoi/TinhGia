@@ -150,11 +150,22 @@ class App {
     // Tools
     if (this.dom.toolButtons) {
       this.dom.toolButtons.forEach(function (btn) {
-        btn.addEventListener('click', function () {
+        var lastTap = 0;
+        var activateTool = function (e) {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          var now = Date.now();
+          if (now - lastTap < 400) return;
+          lastTap = now;
+
           self.dom.toolButtons.forEach(function (b) { b.classList.remove('active'); });
           btn.classList.add('active');
           self.editor.setTool(btn.dataset.tool);
-        });
+        };
+        btn.addEventListener('click', activateTool);
+        btn.addEventListener('touchend', activateTool, { passive: false });
       });
     }
 
@@ -169,22 +180,51 @@ class App {
       });
     }
 
-    // Mode buttons (Chuột / Kéo khung / Vẽ vùng)
+    // Mode buttons (Chuột / Kéo khung / Vẽ vùng) – độc lập với tool
     if (this.dom.modeButtons) {
       this.dom.modeButtons.forEach(function (btn) {
-        btn.addEventListener('click', function () {
+        var lastTap = 0;
+        var activateMode = function (e) {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          var now = Date.now();
+          if (now - lastTap < 400) return; // chống double touch+click
+          lastTap = now;
+
           self.dom.modeButtons.forEach(function (b) { b.classList.remove('active'); });
           btn.classList.add('active');
           self.editor.setSelectMode(btn.dataset.mode);
-        });
+
+          // Luôn giữ Chọn ô hoặc Xóa ô
+          var tool = self.editor.currentTool;
+          if (tool !== 'select' && tool !== 'erase') {
+            self.editor.setTool('select');
+            tool = 'select';
+          }
+          if (self.dom.toolButtons) {
+            self.dom.toolButtons.forEach(function (b) {
+              b.classList.toggle('active', b.dataset.tool === tool);
+            });
+          }
+        };
+        btn.addEventListener('click', activateMode);
+        btn.addEventListener('touchend', activateMode, { passive: false });
       });
     }
 
-    // Auto Select (nút riêng, không đổi mode)
+    // Auto Select (nút bấm riêng)
     if (this.dom.btnAutoSelect) {
-      this.dom.btnAutoSelect.addEventListener('click', function () {
+      var runAuto = function (e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         self.editor.autoSelect();
-      });
+      };
+      this.dom.btnAutoSelect.addEventListener('click', runAuto);
+      this.dom.btnAutoSelect.addEventListener('touchend', runAuto, { passive: false });
     }
 
     // Color pick From / To (swatches)
