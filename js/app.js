@@ -60,9 +60,9 @@ class App {
       manualPrice: document.getElementById('manual-price'),
       cellSize: document.getElementById('cell-size'),
       selectionSize: document.getElementById('selection-size'),
-      toolButtons: document.querySelectorAll('.tool-btn'),
+      toolButtons: document.querySelectorAll('.tool-btn[data-tool]'),
       diffChips: document.querySelectorAll('.diff-chip'),
-      selectModeRadios: document.querySelectorAll('input[name="select-mode"]'),
+      modeButtons: document.querySelectorAll('.mode-btn[data-mode]'),
       btnAutoSelect: document.getElementById('btn-auto-select'),
       fromColor: document.getElementById('from-color'),
       toColor: document.getElementById('to-color'),
@@ -169,16 +169,18 @@ class App {
       });
     }
 
-    // Select mode
-    if (this.dom.selectModeRadios) {
-      this.dom.selectModeRadios.forEach(function (radio) {
-        radio.addEventListener('change', function (e) {
-          if (e.target.checked) self.editor.setSelectMode(e.target.value);
+    // Mode buttons (Chuột / Kéo khung / Vẽ vùng)
+    if (this.dom.modeButtons) {
+      this.dom.modeButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          self.dom.modeButtons.forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          self.editor.setSelectMode(btn.dataset.mode);
         });
       });
     }
 
-    // Auto Select
+    // Auto Select (nút riêng, không đổi mode)
     if (this.dom.btnAutoSelect) {
       this.dom.btnAutoSelect.addEventListener('click', function () {
         self.editor.autoSelect();

@@ -447,24 +447,30 @@ class ImageEditor {
     if (!g) return;
     var ctx = this.ctx;
     var n = this.brushSize;
+    var half = Math.floor(n / 2);
     ctx.save();
     ctx.fillStyle = 'rgba(100,100,100,0.35)';
     ctx.strokeStyle = 'rgba(60,60,60,0.7)';
     ctx.lineWidth = 1.5;
+    var labelX = anchorCell.x, labelY = anchorCell.y;
     for (var dr = 0; dr < n; dr++) {
       for (var dc = 0; dc < n; dc++) {
-        var rr = anchorCell.row + dr;
-        var cc = anchorCell.col + dc;
+        var rr = anchorCell.row + dr - half;
+        var cc = anchorCell.col + dc - half;
         if (rr < 0 || rr >= g.totalRows || cc < 0 || cc >= g.totalCols) continue;
         var cell = g.cells[rr][cc];
         ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
         ctx.strokeRect(cell.x + 0.5, cell.y + 0.5, cell.w, cell.h);
+        if (dr === 0 && dc === 0) {
+          labelX = cell.x;
+          labelY = cell.y;
+        }
       }
     }
-    // Label size
+    // Label size ở góc trên-trái của khối brush
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(n + '×' + n, anchorCell.x + 3, anchorCell.y + 13);
+    ctx.fillText(n + '×' + n, labelX + 3, labelY + 13);
     ctx.restore();
   }
 
@@ -707,12 +713,13 @@ class ImageEditor {
     if (!cell) return;
     var g = this.gridInfo;
     var n = this.brushSize;
+    var half = Math.floor(n / 2);
     var changed = false;
 
     for (var dr = 0; dr < n; dr++) {
       for (var dc = 0; dc < n; dc++) {
-        var rr = cell.row + dr;
-        var cc = cell.col + dc;
+        var rr = cell.row + dr - half;
+        var cc = cell.col + dc - half;
         if (rr < 0 || rr >= g.totalRows || cc < 0 || cc >= g.totalCols) continue;
         var key = cc + ',' + rr;
         if (this.currentTool === 'select') {
