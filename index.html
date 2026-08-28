@@ -1,1566 +1,903 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình chọn lưới ảnh với cắt ảnh và kéo chọn</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px;
-        }
-        #imageContainer {
-            position: relative;
-            display: inline-block;
-            max-width: 100%;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tính giá hình xăm</title>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    }
 
-#displayImage,
-#gridCanvas,
-#drawCanvas {
-    max-width: 100%;
-    height: auto;
-}
-        #gridCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-        #cursorOverlay {
-            position: absolute;
-            background: rgba(255, 255, 0, 0.3);
-            border: 2px solid rgba(255, 255, 0, 0.7);
-            pointer-events: none;
-            display: none;
-        }
-        #cropOverlay {
-            position: absolute;
-            border: 2px dashed blue;
-            background: rgba(0, 0, 255, 0.1);
-            pointer-events: auto;
-            display: none;
-        }
-        #selectOverlay {
-            position: absolute;
-            border: 2px dashed rgba(255, 255, 0, 0.7);
-            background: rgba(255, 255, 0, 0.2);
-            pointer-events: none;
-            display: none;
-        }
-        #controls {
-            margin: 20px 0;
-        }
-        #result {
-            margin-top: 20px;
-            font-weight: bold;
-        }
-        #imageInfo {
-            margin-top: 10px;
-        }
-        #zoomContainer {
-            margin-top: 10px;
-        }
-        #selectionMode, #areaSize, #cropMode {
-            margin-top: 10px;
-        }
-        #resultVND, #resultEUR {
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        .resize-handle {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            background: rgba(0, 0, 255, 0.8);
-            border: 1px solid white;
-            cursor: pointer;
-            z-index: 10;
-        }
-        .resize-handle.top-left {
-            top: -8px;
-            left: -8px;
-            cursor: nwse-resize;
-        }
-        .resize-handle.top-right {
-            top: -8px;
-            right: -8px;
-            cursor: nesw-resize;
-        }
-        .resize-handle.bottom-left {
-            bottom: -8px;
-            left: -8px;
-            cursor: nesw-resize;
-        }
-        .resize-handle.bottom-right {
-            bottom: -8px;
-            right: -8px;
-            cursor: nwse-resize;
-        }
-        #zoomSlider {
-            width: 100%;
-            max-width: 400px;
-            margin-top: 5px;
-        }
-        .resize-handle.top {
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            cursor: ns-resize;
-        }
-        .resize-handle.right {
-            right: -8px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: ew-resize;
-        }
-        .resize-handle.bottom {
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            cursor: ns-resize;
-        }
-        .resize-handle.left {
-            left: -8px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: ew-resize;
-        }
-    </style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ===== Panel card ===== */
+    .panel {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    /* ===== 1. Tattoo Design ===== */
+    .upload-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 24px;
+      font-size: 14px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .upload-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .upload-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-muted);
+    }
+
+    .file-name {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ===== 2. Dimensions & Grid ===== */
+    .dim-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #f8fafc;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .input-field::placeholder {
+      color: #94a3b8;
+    }
+
+    .scale-section {
+      margin-bottom: 16px;
+    }
+
+    .scale-label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .scale-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .scale-slider-wrap input[type="range"] {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #e2e8f0;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .scale-slider-wrap input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    .scale-min, .scale-max {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .options-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .option-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      background: #f8fafc;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .toggle-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .toggle-btn:not(.active):hover {
+      background: #e2e8f0;
+    }
+
+    .select-field {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      background: #f8fafc;
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-field:focus {
+      border-color: var(--primary);
+    }
+
+    /* ===== 3. Area Selection ===== */
+    .tool-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tool-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 4px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .tool-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .tool-btn.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .tool-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+    }
+
+    .difficulty-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .diff-chip {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+      border: 2px solid transparent;
+    }
+
+    .diff-chip:hover,
+    .diff-chip.active {
+      opacity: 1;
+    }
+
+    .diff-chip.active {
+      opacity: 1;
+      border: 3px solid #1e293b;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 2px 6px rgba(0,0,0,0.25);
+      transform: scale(1.05);
+    }
+
+    .diff-green  { background: #22c55e; }
+    .diff-blue   { background: #3b82f6; }
+    .diff-yellow { background: #eab308; color: #1e293b; }
+    .diff-orange { background: #f97316; }
+    .diff-red    { background: #ef4444; }
+
+    .mode-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .radio-label input {
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== 4. Color Mapping ===== */
+    .color-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .color-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .color-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .color-swatch {
+      width: 100%;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .color-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn-sm {
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-replace {
+      background: #f97316;
+      color: #fff;
+    }
+
+    .btn-replace:hover {
+      background: #ea580c;
+    }
+
+    .btn-replace-all {
+      background: #fbbf24;
+      color: #1e293b;
+    }
+
+    .btn-replace-all:hover {
+      background: #f59e0b;
+    }
+
+    /* Selected Area View */
+    .selected-view-title {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .preview-box {
+      width: 300px;
+      max-width: 100%;
+      margin: 0 auto 14px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: width 0.15s ease;
+    }
+
+    .preview-box img,
+    .preview-box canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .preview-placeholder {
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      background: var(--danger-hover);
+    }
+
+    /* ===== 5. Pricing Summary ===== */
+    .complexity-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .total-area {
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .price-detail {
+      background: #fef9c3;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .price-detail strong {
+      color: #854d0e;
+    }
+
+    .total-cost {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .total-cost .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .total-cost .amount {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .conversions {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .exchange-rate {
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+
+    .btn-book {
+      width: 100%;
+      padding: 14px;
+      background: #1e3a5f;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-book:hover {
+      background: #152a45;
+    }
+
+    /* Utility */
+    .hidden {
+      display: none !important;
+    }
+
+    .color-swatch-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .color-pick {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      padding: 0;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .color-pick:hover {
+      transform: scale(1.1);
+    }
+    .color-pick.active {
+      border-color: #1e293b;
+      box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1e293b;
+    }
+    .mode-icon {
+      margin-right: 2px;
+    }
+    .price-mode-row .toggle-group {
+      min-width: 140px;
+    }
+
+    .upload-inline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+    }
+    .file-status {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .file-status.has-image {
+      color: #16a34a;
+    }
+    .dim-inline {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .dim-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dim-icon {
+      font-size: 16px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      width: 22px;
+      text-align: center;
+    }
+    .dim-input-wrap .input-field,
+    .dim-input-wrap .select-field {
+      flex: 1;
+      min-width: 0;
+    }
+    .brush-size-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .brush-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .equal-chips {
+      display: grid !important;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .equal-chips .diff-chip {
+      text-align: center;
+      padding: 8px 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .centered-modes {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+    }
+    .btn-auto {
+      background: #0f766e;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-auto:hover {
+      background: #0d9488;
+    }
+    .color-actions.full-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .color-actions.full-row .btn-sm {
+      width: 100%;
+      padding: 10px;
+      text-align: center;
+    }
+    .price-mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .price-mode-row .complexity-badge {
+      margin: 0;
+    }
+    .price-mode-row .toggle-group {
+      min-width: 140px;
+    }
+    .conversions {
+      text-align: center;
+    }
+    .diff-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .price-line {
+      display: flex;
+      align-items: flex-start;
+      margin: 4px 0;
+      line-height: 1.4;
+    }
+  </style>
 </head>
 <body>
-    <div id="controls">
-        <input type="file" id="imageInput" accept="image/*">
-        <div id="imageInfo">Kích thước ảnh: Chưa tải ảnh</div>
-        <div>
-            <label>Chiều ngang (mm): </label>
-            <input type="number" id="widthMm" min="1" placeholder="Nhập chiều ngang">
+  <div class="container">
+
+    <!-- ========== Upload + Kích thước ========== -->
+    <section class="panel" id="panel-design">
+      <div class="upload-inline" style="margin-bottom:12px">
+        <label class="upload-btn" for="image-upload">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="18" height="18">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+          </svg>
+          Chọn ảnh
+        </label>
+        <input type="file" id="image-upload" accept="image/*" class="hidden">
+        <span class="file-status" id="file-name">Chưa có ảnh</span>
+      </div>
+      <div class="dim-inline">
+        <div class="dim-input-wrap">
+          <span class="dim-icon" title="Chiều ngang">↔</span>
+          <input type="number" class="input-field" id="input-width" placeholder="mm" min="1">
         </div>
-        <div>
-            <label>Chiều dọc (mm): </label>
-            <input type="number" id="heightMm" min="1" placeholder="Nhập chiều dọc">
+        <div class="dim-input-wrap">
+          <span class="dim-icon" title="Chiều dọc">↕</span>
+          <input type="number" class="input-field" id="input-height" placeholder="mm" min="1">
         </div>
-        <br>
-        <div>
-            <label>Chế độ giá: </label>
-            <label><input type="radio" name="priceMode" value="auto" checked> Tự động</label>
-            <label><input type="radio" name="priceMode" value="manual"> Thủ công</label>
+        <div class="dim-input-wrap">
+          <span class="dim-icon" title="Cỡ ô lưới">⊞</span>
+          <select class="select-field" id="cell-size">
+            <option value="1" selected>1×1</option>
+            <option value="2">2×2</option>
+            <option value="4">4×4</option>
+            <option value="8">8×8</option>
+          </select>
         </div>
-        <div id="manualPriceInput" style="display: none;">
-            <label>Giá mỗi cm² (VNĐ): </label>
-<input type="number" id="pricePerCell" min="0" step="1000" value="50000">
-        </div>
-        <div id="zoomContainer">
-            <label>Thu phóng ảnh:</label><br>
-            <input type="range" id="zoomSlider" min="0.5" max="2" step="0.1" value="1">
-        </div>
-        <div>
-            <br>
-            <label>Kích thước ô (cm²): </label>
-            <select id="cellSize">
-                <option value="2" selected>2x2</option>
-                <option value="3">3x3</option>
-                <option value="4">4x4</option>
-                <option value="5">5x5</option>
-                <option value="6">6x6</option>
-                <option value="7">7x7</option>
-                <option value="8">8x8</option>
-                <option value="9">9x9</option>
-                <option value="10">10x10</option>
-            </select>
-        </div>
-        <div id="areaSize">
-            <label>Kích thước vùng chọn: </label>
-            <select id="selectionAreaSize">
-                <option value="1">1</option>
-                <option value="2" selected>2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-                <option value="13">13</option>
-                <option value="14">14</option>
-                <option value="15">15</option>
-            </select>
-        </div>
-        <div id="selectionMode">
-            <label><input type="radio" name="mode" value="drawRegion"> Vẽ vùng chọn</label>
-            <label><input type="radio" name="mode" value="select" checked> Chọn ô</label>
-            <label><input type="radio" name="mode" value="deselect"> Xóa ô</label>   
-            <label><input type="radio" name="mode" value="crop"> Cắt ảnh</label>    
-<div id="difficultyOptions" style="margin-top: 10px; display: none;">
-                    <label><input type="radio" name="difficulty" value="very_easy" checked><span style="color: limegreen;">Rất dễ</span></label>
-                    <label><input type="radio" name="difficulty" value="easy"><span style="color: blue;">Dễ</span></label>
-                    <label><input type="radio" name="difficulty" value="medium"><span style="color: gold;">Vừa</span></label>
-                    <label><input type="radio" name="difficulty" value="hard"><span style="color: orange;">Khó</span></label>
-                    <label><input type="radio" name="difficulty" value="very_hard"><span style="color: red;">Rất khó</span></label>
-            <div id="selectMethodOptions" style="margin-top: 10px; display: none;">
-                </div>
-                <label><input type="radio" name="selectMethod" value="move" checked> Di chuyển chuột</label>
-                <label><input type="radio" name="selectMethod" value="drag"> Kéo để chọn</label>
-            </div>
-        </div>
- <div style="display: flex; gap: 5px; align-items: center; margin-bottom: 5px; margin-top: 10px;">
-        <label style="min-width: -10px;">Từ màu:</label>
-        <select id="fromColor" style="padding: 5px; border-radius: 4px;">
-            <option value="very_easy">🟢</option>
-            <option value="easy">🔵</option>
-            <option value="medium">🟡</option>
-            <option value="hard">🟠</option>
-            <option value="very_hard">🔴</option>
-        </select>
-        
-        <label style="min-width: -10px;">   Đổi thành:</label>
-        <select id="toColor" style="padding: 5px; border-radius: 4px;">
-            <option value="very_easy">🟢</option>
-            <option value="easy">🔵</option>
-            <option value="medium">🟡</option>
-            <option value="hard">🟠</option>
-            <option value="very_hard">🔴</option>
-        </select>
-    </div>
-    
-    <div style="display: flex; gap: 10px;">
-        <button onclick="changeCellColor()" style="background: #ff6b6b; color: white; padding: 10px 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-            🔄 Đổi 1 màu
+      </div>
+    </section>
+
+    <!-- ========== Chọn vùng ========== -->
+    <section class="panel" id="panel-selection">
+      <div class="tool-row" style="grid-template-columns: repeat(4, 1fr);">
+        <button type="button" class="tool-btn active" data-tool="select">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9a2.25 2.25 0 0 1-2.25-2.25v-9Z" />
+          </svg>
+          Chọn ô
         </button>
-        <button onclick="changeAllColor()" style="background: #ff9800; color: white; padding: 10px 10px; border: none; border-radius: 6px; cursor: pointer;">🎨 Đổi tất cả</button>
-    </div>
-<!-- THÊM DÒNG NÀY -->
-<div id="colorStats" style="margin-top: 10px; font-size: 14px; font-weight: bold; color: #333; padding: 5px; background: #f0f0f0; border-radius: 4px;"></div>
-        <br>
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-    <button onclick="createGrid()">Tạo lưới</button>
-    <button onclick="autoSelect()" style="background: #4CAF50; color: white;">🤖 Chọn tự động</button>
-    
-    <!-- THÊM 2 NÚT MỚI TẠI ĐÂY -->
-    <button id="confirmRegionBtn" onclick="confirmDrawnRegion()" style="display:none; background:#2196F3; color:white; padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">
-        ✓ Xác nhận vùng
-    </button>
-    <button id="clearRegionBtn" onclick="clearDrawnRegion()" style="display:none; background:#f44336; color:white; padding:8px 14px; border:none; border-radius:6px; cursor:pointer;">
-        ✕ Xóa vùng vẽ
-    </button>
-</div>
-        <div id="cropMode" style="display: none;">
-                <button onclick="cropImage()">Cắt</button>
-            </div>
-        <br>
-        <div id="imageContainer">
-            <img id="displayImage" style="display: none;">
-            <canvas id="gridCanvas"></canvas>
-            <div id="cursorOverlay"></div>
-            <div id="cropOverlay">
-                <div class="resize-handle top-left"></div>
-                <div class="resize-handle top-right"></div>
-                <div class="resize-handle bottom-left"></div>
-                <div class="resize-handle bottom-right"></div>
-                <div class="resize-handle top"></div>
-                <div class="resize-handle right"></div>
-                <div class="resize-handle bottom"></div>
-                <div class="resize-handle left"></div>
-            </div>
-            <div id="selectOverlay"></div>
-<!-- THÊM CANVAS VẼ VÙNG TẠI ĐÂY -->
-    <canvas id="drawCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></canvas>
+        <button type="button" class="tool-btn" data-tool="erase">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+          </svg>
+          Xóa ô
+        </button>
+        <button type="button" class="tool-btn" data-tool="crop">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          </svg>
+          Cắt ảnh
+        </button>
+        <div class="option-group brush-size-group">
+          <span class="brush-label">🖌️ Chọn cỡ bút</span>
+          <select class="select-field" id="selection-size">
+            <option value="1" selected>1×1</option>
+            <option value="2">2×2</option>
+            <option value="3">3×3</option>
+            <option value="4">4×4</option>
+            <option value="5">5×5</option>
+          </select>
         </div>
-        <div id="totalArea" style="font-weight: bold;">Total area: 0 cm² (0 cells)</div>
-        <div id="resultDetails" style="margin-top: 10px;"></div>
-        <div id="totalPrice" style="font-weight: bold;">Tổng tiền (VNĐ): 0 ₫</div>
-<div id="resultUSD"></div>
-<div id="resultEUR"></div>
-<div id="exchangeRate"></div>
-        <br>
-        <button onclick="checkPrice()">Check Price</button>
-    </div>
-    <script>
-const imageInput = document.getElementById('imageInput');
-const displayImage = document.getElementById('displayImage');
-const gridCanvas = document.getElementById('gridCanvas');
-const cursorOverlay = document.getElementById('cursorOverlay');
-const cropOverlay = document.getElementById('cropOverlay');
-const selectOverlay = document.getElementById('selectOverlay');
-const pricePerCellInput = document.getElementById('pricePerCell');
-const widthMmInput = document.getElementById('widthMm');
-const heightMmInput = document.getElementById('heightMm');
-const cellSizeInput = document.getElementById('cellSize');
-const zoomSlider = document.getElementById('zoomSlider');
-const imageInfo = document.getElementById('imageInfo');
-const result = document.getElementById('result');
-const selectionAreaSize = document.getElementById('selectionAreaSize');
-const selectionModeInputs = document.getElementsByName('mode');
-const selectMethodInputs = document.getElementsByName('selectMethod');
-const cropModeDiv = document.getElementById('cropMode');
-const imageContainer = document.getElementById('imageContainer');
-let selectedCells = 0;
-let selectedCellIndices = [];
-let isSelecting = false;
-let isCropping = false;
-let isDragging = false;
-let isResizing = false;
-let resizeHandle = null;
-let startX, startY;
-let originalWidthPx, originalHeightPx, aspectRatio;
-let cropData = null;
-let selectData = null;
-const ctx = gridCanvas.getContext('2d');
-// ← THÊM 3 DÒNG NÀY
-let cachedImageData = null;
-let cachedPixels = null;
-let cachedTimestamp = 0;
-
-let isDrawingRegion = false;
-let drawPoints = [];          // mảng điểm {x, y}
-let isDrawing = false;
-const drawCanvas = document.getElementById('drawCanvas');
-const drawCtx = drawCanvas.getContext('2d');
-
-const priceModeInputs = document.getElementsByName('priceMode');
-const manualPriceInput = document.getElementById('manualPriceInput');
-
-// Khởi tạo trạng thái ban đầu cho difficultyOptions
-document.addEventListener('DOMContentLoaded', function() {
-    const selectedMode = Array.from(selectionModeInputs).find(input => input.checked).value;
-    document.getElementById('difficultyOptions').style.display = selectedMode === 'select' ? 'block' : 'none';
-    document.getElementById('selectMethodOptions').style.display = selectedMode === 'crop' ? 'none' : 'block';
-});
-
-priceModeInputs.forEach(input => {
-    input.addEventListener('change', function() {
-        manualPriceInput.style.display = input.value === 'manual' ? 'block' : 'none';
-        updateResult();
-    });
-});
-
-function tinhGiaXam(x) {
-    // x: diện tích tính bằng cm²
-    // Giá trả về đơn vị: VNĐ
-    
-    let giaK; // Giá tính theo nghìn đồng (k VND)
-    if (x <= 2) {
-        // Mốc min: dưới hoặc bằng 2 cm² tính 300k
-        giaK = 300;
-    } 
-    else if (x > 2 && x <= 4) {
-        // Nội suy mượt từ 2cm² (300k) lên 4cm² (400k)
-        giaK = 300 + (x - 2) * 50;
-    } 
-    else if (x > 4 && x <= 30) {
-        // Đoạn từ 4cm² đến 30cm² (đạt 800k ở 10cm² và 1500k ở 30cm²)
-        giaK = 400 * Math.pow(x / 4, 0.61316);
-    } 
-    else {
-        // Đoạn > 30cm² (đạt 6000k ở 300cm² và 9000k ở 600cm²)
-        giaK = 1500 * Math.pow(x / 30, 0.59828);
-    }
-    // Nhân với 1000 và làm tròn đến hàng nghìn VNĐ
-    return Math.round(giaK) * 1000;
-}
-
-imageInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            displayImage.src = e.target.result;
-            displayImage.style.display = 'block';
-            cropData = null;
-            selectData = null;
-            isSelecting = false;
-            isCropping = false;
-            isDragging = false;
-            isResizing = false;
-            cropOverlay.style.display = 'none';
-            selectOverlay.style.display = 'none';
-            cursorOverlay.style.display = 'none';
-            cropModeDiv.style.display = 'none';
-            selectionModeInputs[0].checked = true;
-            selectMethodInputs[0].checked = true;
-            selectedCells = 0;
-            selectedCellIndices = [];
-            displayImage.onload = function() {
-                originalWidthPx = displayImage.naturalWidth;
-                originalHeightPx = displayImage.naturalHeight;
-                aspectRatio = originalWidthPx / originalHeightPx;
-                imageInfo.textContent = `Kích thước ảnh: ${Math.round(originalWidthPx)}px x ${Math.round(originalHeightPx)}px`;
-                updateDimensions();
-                ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-            };
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-widthMmInput.addEventListener('change', function() {
-    if (widthMmInput.value && aspectRatio) {
-        heightMmInput.value = (widthMmInput.value / aspectRatio).toFixed(2);
-    }
-    updateDimensions();
-});
-
-heightMmInput.addEventListener('change', function() {
-    if (heightMmInput.value && aspectRatio) {
-        widthMmInput.value = (heightMmInput.value * aspectRatio).toFixed(2);
-    }
-    updateDimensions();
-});
-
-cellSizeInput.addEventListener('change', function() {
-    createGrid();
-    updateResult();
-});
-
-selectionAreaSize.addEventListener('change', function() {
-    updateResult();
-});
-
-selectionModeInputs.forEach(input => {
-    input.addEventListener('change', function() {
-        isSelecting = false;
-        isResizing = false;
-        isCropping = input.value === 'crop';
-        isDrawingRegion = input.value === 'drawRegion';
-        isDrawing = false;
-        drawPoints = [];
-
-        cursorOverlay.style.display = 'none';
-        selectOverlay.style.display = 'none';
-        cropModeDiv.style.display = isCropping ? 'block' : 'none';
-
-        // Hiện / ẩn nút
-        document.getElementById('confirmRegionBtn').style.display = isDrawingRegion ? 'inline-block' : 'none';
-        document.getElementById('clearRegionBtn').style.display = isDrawingRegion ? 'inline-block' : 'none';
-
-        // Hiện độ khó khi chọn ô hoặc vẽ vùng
-        document.getElementById('difficultyOptions').style.display = 
-            (input.value === 'select' || input.value === 'drawRegion') ? 'block' : 'none';
-
-        document.getElementById('selectMethodOptions').style.display = 
-            (isCropping || isDrawingRegion) ? 'none' : 'block';
-
-        // ===== Xử lý canvas vẽ =====
-        if (isDrawingRegion) {
-            // Đảm bảo canvas có đúng kích thước
-            drawCanvas.width = gridCanvas.width || imageContainer.clientWidth;
-            drawCanvas.height = gridCanvas.height || imageContainer.clientHeight;
-            drawCanvas.style.pointerEvents = 'auto';
-            drawCanvas.style.zIndex = '20';          // đưa lên trên cùng
-            clearDrawnRegion();
-            console.log('Đã bật chế độ Vẽ vùng. Canvas size:', drawCanvas.width, 'x', drawCanvas.height);
-        } else {
-            drawCanvas.style.pointerEvents = 'none';
-            drawCanvas.style.zIndex = '5';
-            clearDrawnRegion();
-        }
-
-        if (isCropping && displayImage.src && displayImage.style.display !== 'none') {
-            const containerRect = imageContainer.getBoundingClientRect();
-            cropOverlay.style.display = 'block';
-            cropOverlay.style.left = '0px';
-            cropOverlay.style.top = '0px';
-            cropOverlay.style.width = `${containerRect.width}px`;
-            cropOverlay.style.height = `${containerRect.height}px`;
-            cropData = { 
-                startX: 0, 
-                startY: 0, 
-                width: containerRect.width, 
-                height: containerRect.height 
-            };
-        } else {
-            cropOverlay.style.display = 'none';
-            cropData = null;
-        }
-        
-        if (!isCropping && !isDrawingRegion) {
-            createGrid();
-        }
-    });
-});
-
-selectMethodInputs.forEach(input => {
-    input.addEventListener('change', function() {
-        isSelecting = false;
-        isDragging = input.value === 'drag';
-        cursorOverlay.style.display = 'none';
-        selectOverlay.style.display = 'none';
-    });
-});
-
-function getCellCounts() {
-    const widthMm = parseFloat(widthMmInput.value) || 0;
-    const heightMm = parseFloat(heightMmInput.value) || 0;
-    const cellSize = parseInt(cellSizeInput.value);
-
-    const xyz = cellSize === 2 ? 0.5 :
-                cellSize === 3 ? 1/3 :
-                cellSize === 4 ? 0.25 :
-                cellSize === 5 ? 0.2 :
-                cellSize === 6 ? 1/6 :
-                cellSize === 7 ? 1/7 :
-                cellSize === 8 ? 1/8 :
-                cellSize === 9 ? 1/9 :
-                0.1;
-
-    const widthCm = widthMm / 10;
-    const heightCm = heightMm / 10;
-
-    const fullWidthCells = Math.floor(widthCm / xyz);
-    const remainderWidth = widthCm % xyz;
-    const totalWidthCells = fullWidthCells + (remainderWidth > 0 ? 1 : 0);
-
-    const fullHeightCells = Math.floor(heightCm / xyz);
-    const remainderHeight = heightCm % xyz;
-    const totalHeightCells = fullHeightCells + (remainderHeight > 0 ? 1 : 0);
-
-    return { 
-        fullWidthCells, totalWidthCells, remainderWidth, 
-        fullHeightCells, totalHeightCells, remainderHeight, 
-        xyz 
-    };
-}
-
-function updateDimensions() {
-    const zoom = parseFloat(zoomSlider.value) || 1;
-
-    if (!originalWidthPx || !originalHeightPx || isNaN(originalWidthPx) || isNaN(originalHeightPx)) {
-        return;
-    }
-
-    // ===== LẤY CHIỀU RỘNG THỰC TẾ CÓ THỂ DÙNG =====
-    // Trừ đi padding/margin để không bị tràn màn hình
-    const availableWidth = Math.min(
-        window.innerWidth - 40,          // trừ margin 2 bên
-        document.body.clientWidth - 40
-    );
-
-    // Cơ sở: không bao giờ vượt quá màn hình, tối đa 600px trên máy tính
-    const baseDisplayWidth = Math.min(600, availableWidth);
-
-    let widthPx = baseDisplayWidth * zoom;
-    let heightPx = (baseDisplayWidth / aspectRatio) * zoom;
-
-    // Gán kích thước hiển thị
-    displayImage.style.width = `${widthPx}px`;
-    displayImage.style.height = `${heightPx}px`;
-    gridCanvas.width = widthPx;
-    gridCanvas.height = heightPx;
-
-    // Đồng bộ canvas vẽ vùng
-    if (typeof drawCanvas !== 'undefined' && drawCanvas) {
-        drawCanvas.width = widthPx;
-        drawCanvas.height = heightPx;
-    }
-
-    // Giới hạn khung crop nếu đang crop
-    if (isCropping && cropData) {
-        cropOverlay.style.width = `${Math.min(cropData.width, widthPx)}px`;
-        cropOverlay.style.height = `${Math.min(cropData.height, heightPx)}px`;
-        cropData.width = Math.min(cropData.width, widthPx);
-        cropData.height = Math.min(cropData.height, heightPx);
-    }
-
-    if (!isCropping) {
-        createGrid();
-    }
-}
-
-function getGridPositions() {
-    const { totalWidthCells, remainderWidth, totalHeightCells, remainderHeight, xyz } = getCellCounts();
-    const widthCm = parseFloat(widthMmInput.value) / 10;
-    const heightCm = parseFloat(heightMmInput.value) / 10;
-    const pixelPerCm = gridCanvas.width / widthCm;
-
-    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
-    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
-    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
-    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
-
-    const xPositions = [0];
-    for (let i = 0; i < totalWidthCells; i++) {
-        xPositions.push(xPositions[i] + cellWidthsCm[i] * pixelPerCm);
-    }
-    const yPositions = [0];
-    for (let i = 0; i < totalHeightCells; i++) {
-        yPositions.push(yPositions[i] + cellHeightsCm[i] * pixelPerCm);
-    }
-
-    return { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm };
-}
-
-function createGrid() {
-    const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
-    if (totalWidthCells < 1 || totalHeightCells < 1) {
-        alert('Vui lòng nhập kích thước ảnh hợp lệ!');
-        return;
-    }
-    if (!displayImage.src || displayImage.style.display === 'none') {
-        alert('Vui lòng tải ảnh trước!');
-        return;
-    }
-
-    selectedCellIndices = selectedCellIndices.filter(([row, col]) => row < totalHeightCells && col < totalWidthCells);
-    selectedCells = selectedCellIndices.length;
-
-    const widthCm = parseFloat(widthMmInput.value) / 10;
-    const heightCm = parseFloat(heightMmInput.value) / 10;
-    const pixelPerCm = gridCanvas.width / widthCm;
-
-    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
-    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
-    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
-    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
-
-    const xPositions = [0];
-    for (let i = 0; i < totalWidthCells; i++) {
-        xPositions.push(xPositions[i] + cellWidthsCm[i] * pixelPerCm);
-    }
-    const yPositions = [0];
-    for (let i = 0; i < totalHeightCells; i++) {
-        yPositions.push(yPositions[i] + cellHeightsCm[i] * pixelPerCm);
-    }
-
-    ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-
-if (drawCanvas) {
-    drawCanvas.width = gridCanvas.width;
-    drawCanvas.height = gridCanvas.height;
-}
-
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= totalWidthCells; i++) {
-        const x = xPositions[i];
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, gridCanvas.height);
-        ctx.stroke();
-    }
-
-    for (let i = 0; i <= totalHeightCells; i++) {
-        const y = yPositions[i];
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(gridCanvas.width, y);
-        ctx.stroke();
-    }
-
-    selectedCellIndices.forEach(([row, col, difficulty]) => {
-        const left = xPositions[col];
-        const top = yPositions[row];
-        const fillWidth = cellWidthsCm[col] * pixelPerCm;
-        const fillHeight = cellHeightsCm[row] * pixelPerCm;
-        
-        ctx.fillStyle = difficulty === 'very_easy' ? 'rgba(50, 205, 50, 0.3)' :
-                        difficulty === 'easy' ? 'rgba(0, 0, 255, 0.3)' :
-                        difficulty === 'medium' ? 'rgba(255, 215, 0, 0.3)' :
-                        difficulty === 'hard' ? 'rgba(255, 165, 0, 0.3)' :
-                        'rgba(255, 0, 0, 0.3)';
-        ctx.fillRect(left, top, fillWidth, fillHeight);
-    });
-
-    updateResult();
-updateColorStats();  // ← THÊM DÒNG NÀY
-}
-
-function getPositionFromEvent(e) {
-    const containerRect = imageContainer.getBoundingClientRect();
-    let clientX, clientY;
-    if (e.type.startsWith('touch')) {
-        clientX = e.touches[0]?.clientX || e.changedTouches[0].clientX;
-        clientY = e.touches[0]?.clientY || e.changedTouches[0].clientY;
-    } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-    }
-    return {
-        x: Math.max(0, clientX - containerRect.left),
-        y: Math.max(0, clientY - containerRect.top)
-    };
-}
-
-function handleStart(e) {
-    e.preventDefault();
-    if (!displayImage.src || displayImage.style.display === 'none') return;
-
-    // ===== CHẾ ĐỘ VẼ VÙNG =====
-    if (isDrawingRegion) {
-        startDrawRegion(e);
-        return;
-    }
-
-    const pos = getPositionFromEvent(e);
-    const target = e.target;
-
-    if (isCropping && target.classList.contains('resize-handle') && cropData) {
-        isResizing = true;
-        resizeHandle = target.className.split(' ')[1];
-        return;
-    }
-
-    if (!isCropping && isDragging && !isSelecting) {
-        isSelecting = true;
-        startX = pos.x;
-        startY = pos.y;
-        selectOverlay.style.display = 'block';
-        selectOverlay.style.left = `${startX}px`;
-        selectOverlay.style.top = `${startY}px`;
-        selectOverlay.style.width = '0px';
-        selectOverlay.style.height = '0px';
-        selectData = { startX, startY, width: 0, height: 0 };
-    } else if (!isCropping && !isDragging) {
-        isSelecting = true;
-        const { totalWidthCells, totalHeightCells } = getCellCounts();
-        const { xPositions, yPositions } = getGridPositions();
-        let col = 0, row = 0;
-        for (let i = 0; i < totalWidthCells; i++) {
-            if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
-                col = i;
-                break;
-            }
-        }
-        for (let i = 0; i < totalHeightCells; i++) {
-            if (pos.y >= yPositions[i] && pos.y < yPositions[i + 1]) {
-                row = i;
-                break;
-            }
-        }
-        if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
-            applyAreaSelection(row, col);
-            updateCursorOverlay(pos, row, col);
-            cursorOverlay.style.display = 'block';
-        }
-    }
-}
-
-function handleMove(e) {
-    e.preventDefault();
-    if (!displayImage.src || displayImage.style.display === 'none') return;
-
-    // ===== CHẾ ĐỘ VẼ VÙNG =====
-    if (isDrawingRegion) {
-        moveDrawRegion(e);
-        return;
-    }
-
-    const pos = getPositionFromEvent(e);
-    const containerRect = imageContainer.getBoundingClientRect();
-    const endX = Math.min(Math.max(pos.x, 0), containerRect.width);
-    const endY = Math.min(Math.max(pos.y, 0), containerRect.height);
-
-    if (isCropping && isResizing && cropData) {
-        // ... giữ nguyên phần resize crop của bạn
-        let { startX, startY, width, height } = cropData;
-        switch (resizeHandle) {
-            case 'top-left':
-                width = cropData.startX + cropData.width - endX;
-                height = cropData.startY + cropData.height - endY;
-                startX = endX;
-                startY = endY;
-                break;
-            case 'top-right':
-                width = endX - cropData.startX;
-                height = cropData.startY + cropData.height - endY;
-                startY = endY;
-                break;
-            case 'bottom-left':
-                width = cropData.startX + cropData.width - endX;
-                height = endY - cropData.startY;
-                startX = endX;
-                break;
-            case 'bottom-right':
-                width = endX - cropData.startX;
-                height = endY - cropData.startY;
-                break;
-            case 'top':
-                height = cropData.startY + cropData.height - endY;
-                startY = endY;
-                break;
-            case 'right':
-                width = endX - cropData.startX;
-                break;
-            case 'bottom':
-                height = endY - cropData.startY;
-                break;
-            case 'left':
-                width = cropData.startX + cropData.width - endX;
-                startX = endX;
-                break;
-        }
-        if (width < 0) {
-            startX += width;
-            width = -width;
-        }
-        if (height < 0) {
-            startY += height;
-            height = -height;
-        }
-        cropOverlay.style.left = `${startX}px`;
-        cropOverlay.style.top = `${startY}px`;
-        cropOverlay.style.width = `${width}px`;
-        cropOverlay.style.height = `${height}px`;
-        cropData = { startX, startY, width, height };
-    } else if (!isCropping && isDragging && isSelecting) {
-        const left = Math.min(startX, endX);
-        const top = Math.min(startY, endY);
-        const width = Math.abs(endX - startX);
-        const height = Math.abs(endY - startY);
-        selectOverlay.style.left = `${left}px`;
-        selectOverlay.style.top = `${top}px`;
-        selectOverlay.style.width = `${width}px`;
-        selectOverlay.style.height = `${height}px`;
-        selectData = { startX: left, startY: top, width, height };
-    } else if (!isCropping && !isDragging && isSelecting) {
-        const { totalWidthCells, totalHeightCells } = getCellCounts();
-        const { xPositions, yPositions } = getGridPositions();
-        let col = 0, row = 0;
-        for (let i = 0; i < totalWidthCells; i++) {
-            if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
-                col = i;
-                break;
-            }
-        }
-        for (let i = 0; i < totalHeightCells; i++) {
-            if (pos.y >= yPositions[i] && pos.y < yPositions[i + 1]) {
-                row = i;
-                break;
-            }
-        }
-        if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
-            applyAreaSelection(row, col);
-            updateCursorOverlay(pos, row, col);
-            cursorOverlay.style.display = 'block';
-        }
-    }
-}
-
-function handleEnd(e) {
-    // ===== CHẾ ĐỘ VẼ VÙNG =====
-    if (isDrawingRegion) {
-        endDrawRegion(e);
-        return;
-    }
-
-    if (isCropping && isResizing) {
-        isResizing = false;
-        resizeHandle = null;
-        if (cropData && cropData.width > 0 && cropData.height > 0) {
-            // giữ khung
-        } else {
-            cropOverlay.style.display = 'none';
-            cropData = null;
-        }
-    } else if (!isCropping && isDragging && isSelecting) {
-        isSelecting = false;
-        selectOverlay.style.display = 'none';
-        applyDragSelection();
-    } else if (!isCropping && !isDragging && isSelecting) {
-        isSelecting = false;
-        cursorOverlay.style.display = 'none';
-    }
-}
-
-function cropImage() {
-    if (!cropData || cropData.width <= 0 || cropData.height <= 0) {
-        alert('Vùng cắt không hợp lệ! Vui lòng chọn lại vùng cắt.');
-        cropOverlay.style.display = 'none';
-        cropData = null;
-        return;
-    }
-
-    const containerRect = imageContainer.getBoundingClientRect();
-    const zoom = parseFloat(zoomSlider.value);
-    const currentWidthPx = parseFloat(displayImage.style.width) || displayImage.naturalWidth;
-    const pixelRatio = originalWidthPx / currentWidthPx;
-
-    const cropX = Math.max(0, cropData.startX * pixelRatio);
-    const cropY = Math.max(0, cropData.startY * pixelRatio);
-    const cropWidthPx = Math.min(originalWidthPx - cropX, cropData.width * pixelRatio);
-    const cropHeightPx = Math.min(originalHeightPx - cropY, cropData.height * pixelRatio);
-
-    if (cropWidthPx <= 0 || cropHeightPx <= 0 || isNaN(cropWidthPx) || isNaN(cropHeightPx)) {
-        alert('Vùng cắt không hợp lệ! Vui lòng chọn lại vùng cắt.');
-        cropOverlay.style.display = 'none';
-        cropData = null;
-        return;
-    }
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = cropWidthPx;
-    canvas.height = cropHeightPx;
-    ctx.drawImage(displayImage, cropX, cropY, cropWidthPx, cropHeightPx, 0, 0, cropWidthPx, cropHeightPx);
-
-    displayImage.src = canvas.toDataURL();
-    originalWidthPx = cropWidthPx;
-    originalHeightPx = cropHeightPx;
-    aspectRatio = originalWidthPx / originalHeightPx;
-    imageInfo.textContent = `Kích thước ảnh: ${Math.round(originalWidthPx)}px x ${Math.round(originalHeightPx)}px`;
-
-    cropData = null;
-    cropOverlay.style.display = 'none';
-    selectedCellIndices = [];
-    selectedCells = 0;
-
-    updateDimensions();
-    createGrid();
-}
-
-function applyDragSelection() {
-    if (!selectData) return;
-
-    const { xPositions, yPositions } = getGridPositions();
-    const { totalWidthCells, totalHeightCells } = getCellCounts();
-    const difficulty = Array.from(document.getElementsByName('difficulty')).find(input => input.checked).value;
-
-    let startCol = 0, startRow = 0, endCol = 0, endRow = 0;
-    for (let i = 0; i < totalWidthCells; i++) {
-        if (selectData.startX >= xPositions[i] && selectData.startX < xPositions[i + 1]) startCol = i;
-        if (selectData.startX + selectData.width >= xPositions[i] && selectData.startX + selectData.width < xPositions[i + 1]) endCol = i;
-    }
-    endCol = Math.min(totalWidthCells - 1, endCol + 1);
-    for (let i = 0; i < totalHeightCells; i++) {
-        if (selectData.startY >= yPositions[i] && selectData.startY < yPositions[i + 1]) startRow = i;
-        if (selectData.startY + selectData.height >= yPositions[i] && selectData.startY + selectData.height < yPositions[i + 1]) endRow = i;
-    }
-    endRow = Math.min(totalHeightCells - 1, endRow + 1);
-
-    const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
-
-    for (let i = startRow; i <= endRow; i++) {
-        for (let j = startCol; j <= endCol; j++) {
-            const cellIndex = [i, j, difficulty];
-            if (mode === 'select') {
-                if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                    selectedCellIndices.push(cellIndex);
-                    selectedCells++;
-                } else {
-                    selectedCellIndices = selectedCellIndices.map(item => 
-                        item[0] === i && item[1] === j ? [i, j, difficulty] : item
-                    );
-                }
-            } else if (mode === 'deselect') {
-                selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
-                selectedCells--;
-            }
-        }
-    }
-
-    selectData = null;
-    createGrid();
-updateColorStats();  // ← THÊM DÒNG NÀY
-}
-
-function applyAreaSelection(row, col) {
-    const size = parseInt(selectionAreaSize.value);
-    const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
-    const difficulty = Array.from(document.getElementsByName('difficulty')).find(input => input.checked).value;
-    const { totalWidthCells, totalHeightCells } = getCellCounts();
-
-    for (let i = row; i < Math.min(row + size, totalHeightCells); i++) {
-        for (let j = col; j < Math.min(col + size, totalWidthCells); j++) {
-            const cellIndex = [i, j, difficulty];
-            if (mode === 'select') {
-                if (!selectedCellIndices.some(([r, c]) => r === i && c === j)) {
-                    selectedCellIndices.push(cellIndex);
-                    selectedCells++;
-                } else {
-                    selectedCellIndices = selectedCellIndices.map(item => 
-                        item[0] === i && item[1] === j ? [i, j, difficulty] : item
-                    );
-                }
-            } else if (mode === 'deselect') {
-                selectedCellIndices = selectedCellIndices.filter(([r, c]) => r !== i || c !== j);
-                selectedCells--;
-            }
-        }
-    }
-    createGrid();
-updateColorStats();  // ← THÊM DÒNG NÀY
-}
-
-function formatVND(number) {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-function updateCurrencyConversion(totalPriceVND) {
-    const resultUSD = document.getElementById('resultUSD') || document.getElementById('resultVND');
-    const resultEUR = document.getElementById('resultEUR');
-    const exchangeRate = document.getElementById('exchangeRate');
-    
-    const defaultUsdRate = 25300;   // 1 USD = ? VND
-    const defaultEurRate = 27500;   // 1 EUR = ? VND
-    const apiUrl = 'https://open.er-api.com/v6/latest/USD';
-
-    fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            if (data.result === 'success' && data.rates) {
-                const usdToVnd = data.rates.VND || defaultUsdRate;
-                const eurToVnd = data.rates.VND / data.rates.EUR || defaultEurRate;
-
-                const totalUSD = (totalPriceVND / usdToVnd).toFixed(2);
-                const totalEUR = (totalPriceVND / eurToVnd).toFixed(2);
-
-                if (resultUSD) resultUSD.textContent = `≈ $${totalUSD} USD`;
-                resultEUR.textContent = `≈ €${totalEUR} EUR`;
-                exchangeRate.textContent = `Tỷ giá: 1 USD ≈ ${formatVND(Math.round(usdToVnd))} ₫ | 1 EUR ≈ ${formatVND(Math.round(eurToVnd))} ₫`;
-            } else {
-                useDefaultRates(totalPriceVND, defaultUsdRate, defaultEurRate);
-            }
-        })
-        .catch(error => {
-            console.error('Lỗi khi lấy tỉ giá:', error.message);
-            useDefaultRates(totalPriceVND, defaultUsdRate, defaultEurRate);
-        });
-
-    function useDefaultRates(totalPriceVND, usdRate, eurRate) {
-        const totalUSD = (totalPriceVND / usdRate).toFixed(2);
-        const totalEUR = (totalPriceVND / eurRate).toFixed(2);
-        if (resultUSD) resultUSD.textContent = `≈ $${totalUSD} USD (tỷ giá mặc định)`;
-        resultEUR.textContent = `≈ €${totalEUR} EUR (tỷ giá mặc định)`;
-        exchangeRate.textContent = `Tỷ giá mặc định: 1 USD = ${formatVND(usdRate)} ₫ | 1 EUR = ${formatVND(eurRate)} ₫`;
-    }
-}
-
-function updateResult() {
-    const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
-    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
-    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
-    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
-    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
-
-    const areasByDifficulty = {
-        very_easy: 0,
-        easy: 0,
-        medium: 0,
-        hard: 0,
-        very_hard: 0
-    };
-
-    selectedCellIndices.forEach(([row, col, difficulty]) => {
-        const area = cellWidthsCm[col] * cellHeightsCm[row];
-        areasByDifficulty[difficulty] += area;
-    });
-
-    const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
-
-    let pricePerCm2;
-    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
-
-    if (priceMode === 'auto') {
-        const baseTotalVND = tinhGiaXam(totalAreaCm2);
-        pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalVND / totalAreaCm2 : 0;
-    } else {
-        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
-    }
-
-    const priceAdjustments = {
-        very_easy: 1.0,   // Nguyên giá
-        easy: 1.25,       // +25%
-        medium: 1.5,      // +50%
-        hard: 1.75,       // +75%
-        very_hard: 2.0    // +100%
-    };
-
-    let totalPriceVND = 0;
-    const resultDetails = document.getElementById('resultDetails');
-    resultDetails.innerHTML = '';
-
-    for (const difficulty in areasByDifficulty) {
-        const area = areasByDifficulty[difficulty];
-        if (area > 0) {
-            const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
-            const totalPrice = area * adjustedPrice;
-            totalPriceVND += totalPrice;
-
-            const color = difficulty === 'very_easy' ? 'limegreen' :
-                          difficulty === 'easy' ? 'blue' :
-                          difficulty === 'medium' ? 'gold' :
-                          difficulty === 'hard' ? 'orange' : 'red';
-
-            resultDetails.innerHTML += `
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                    <span>${area.toFixed(2)} cm² / Giá/cm²: ${formatVND(Math.round(adjustedPrice))} ₫</span>
-                </div>
-            `;
-        }
-    }
-
-    // Làm tròn đến hàng nghìn
-    totalPriceVND = Math.round(totalPriceVND / 1000) * 1000;
-
-    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
-    document.getElementById('totalPrice').textContent = `Tổng tiền (VNĐ): ${formatVND(totalPriceVND)} ₫`;
-}
-
-function checkPrice() {
-    const { fullWidthCells, totalWidthCells, remainderWidth, fullHeightCells, totalHeightCells, remainderHeight, xyz } = getCellCounts();
-    const cellWidthsCm = Array(totalWidthCells).fill(xyz);
-    if (remainderWidth > 0) cellWidthsCm[totalWidthCells - 1] = remainderWidth;
-    const cellHeightsCm = Array(totalHeightCells).fill(xyz);
-    if (remainderHeight > 0) cellHeightsCm[totalHeightCells - 1] = remainderHeight;
-
-    const areasByDifficulty = {
-        very_easy: 0,
-        easy: 0,
-        medium: 0,
-        hard: 0,
-        very_hard: 0
-    };
-
-    selectedCellIndices.forEach(([row, col, difficulty]) => {
-        const area = cellWidthsCm[col] * cellHeightsCm[row];
-        areasByDifficulty[difficulty] += area;
-    });
-
-    const totalAreaCm2 = Object.values(areasByDifficulty).reduce((sum, area) => sum + area, 0);
-
-    let pricePerCm2;
-    const priceMode = Array.from(priceModeInputs).find(input => input.checked).value;
-
-    if (priceMode === 'auto') {
-        const baseTotalVND = tinhGiaXam(totalAreaCm2);
-        pricePerCm2 = (totalAreaCm2 > 0) ? baseTotalVND / totalAreaCm2 : 0;
-    } else {
-        pricePerCm2 = parseFloat(pricePerCellInput.value) || 0;
-    }
-
-    const priceAdjustments = {
-        very_easy: 1.0,
-        easy: 1.25,
-        medium: 1.5,
-        hard: 1.75,
-        very_hard: 2.0
-    };
-
-    let totalPriceVND = 0;
-    const resultDetails = document.getElementById('resultDetails');
-    resultDetails.innerHTML = '';
-
-    for (const difficulty in areasByDifficulty) {
-        const area = areasByDifficulty[difficulty];
-        if (area > 0) {
-            const adjustedPrice = pricePerCm2 * priceAdjustments[difficulty];
-            const totalPrice = area * adjustedPrice;
-            totalPriceVND += totalPrice;
-
-            const color = difficulty === 'very_easy' ? 'limegreen' :
-                          difficulty === 'easy' ? 'blue' :
-                          difficulty === 'medium' ? 'gold' :
-                          difficulty === 'hard' ? 'orange' : 'red';
-
-            resultDetails.innerHTML += `
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <div style="width: 20px; height: 20px; background-color: ${color}; margin-right: 10px;"></div>
-                    <span>${area.toFixed(2)} cm² / Giá/cm²: ${formatVND(Math.round(adjustedPrice))} ₫</span>
-                </div>
-            `;
-        }
-    }
-
-    // Làm tròn đến hàng nghìn
-    totalPriceVND = Math.round(totalPriceVND / 1000) * 1000;
-
-    // (Tùy chọn) Giữ logic min giá nếu cần – ví dụ min 250.000₫
-    // if (totalPriceVND < 250000) totalPriceVND = 250000;
-
-    document.getElementById('totalArea').textContent = `Total area: ${totalAreaCm2.toFixed(2)} cm² (${selectedCells} cells)`;
-    document.getElementById('totalPrice').textContent = `Tổng tiền (VNĐ): ${formatVND(totalPriceVND)} ₫`;
-
-    updateCurrencyConversion(totalPriceVND);
-}
-
-imageContainer.addEventListener('mousedown', handleStart);
-imageContainer.addEventListener('mousemove', handleMove);
-imageContainer.addEventListener('mouseup', handleEnd);
-imageContainer.addEventListener('touchstart', handleStart, { passive: false });
-imageContainer.addEventListener('touchmove', handleMove, { passive: false });
-imageContainer.addEventListener('touchend', handleEnd, { passive: false });
-
-imageContainer.addEventListener('mouseleave', function() {
-    if (!isCropping && !isDragging) {
-        cursorOverlay.style.display = 'none';
-    }
-});
-
-imageContainer.addEventListener('mouseenter', function(e) {
-    if (isSelecting && !isCropping && !isDragging) {
-        const pos = getPositionFromEvent(e);
-        const { totalWidthCells, totalHeightCells } = getCellCounts();
-        const { xPositions, yPositions } = getGridPositions();
-        let col = 0, row = 0;
-        for (let i = 0; i < totalWidthCells; i++) {
-            if (pos.x >= xPositions[i] && pos.x < xPositions[i + 1]) {
-                col = i;
-                break;
-            }
-        }
-        for (let i = 0; i < totalHeightCells; i++) {
-            if (pos.y >= yPositions[i] && pos.y < yPositions[i + 1]) {
-                row = i;
-                break;
-            }
-        }
-        if (row >= 0 && row < totalHeightCells && col >= 0 && col < totalWidthCells) {
-            updateCursorOverlay(pos, row, col);
-            cursorOverlay.style.display = 'block';
-        }
-    }
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && isCropping && cropData) {
-        cropImage();
-    } else if (e.key === 'Enter' && !isCropping && isDragging && selectData) {
-        isSelecting = false;
-        selectOverlay.style.display = 'none';
-        applyDragSelection();
-    }
-});
-
-function updateCursorOverlay(pos, row, col) {
-    const size = parseInt(selectionAreaSize.value);
-    const { totalWidthCells, totalHeightCells } = getCellCounts();
-    const { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm } = getGridPositions();
-
-    let overlayWidth = 0;
-    for (let j = col; j < Math.min(col + size, totalWidthCells); j++) {
-        overlayWidth += cellWidthsCm[j] * pixelPerCm;
-    }
-    let overlayHeight = 0;
-    for (let i = row; i < Math.min(row + size, totalHeightCells); i++) {
-        overlayHeight += cellHeightsCm[i] * pixelPerCm;
-    }
-
-    const left = xPositions[col];
-    const top = yPositions[row];
-
-    cursorOverlay.style.width = `${overlayWidth}px`;
-    cursorOverlay.style.height = `${overlayHeight}px`;
-    cursorOverlay.style.left = `${left}px`;
-    cursorOverlay.style.top = `${top}px`;
-}
-
-zoomSlider.addEventListener('input', function() {
-    updateDimensions();
-});
-
-async function autoSelect() {
-    if (!displayImage.src || displayImage.style.display === 'none') {
-        alert('Vui lòng tải ảnh và tạo lưới trước!');
-        return;
-    }
-
-    const difficulty = Array.from(document.getElementsByName('difficulty')).find(input => input.checked)?.value || 'very_easy';
-    const mode = Array.from(selectionModeInputs).find(input => input.checked).value;
-    
-    if (mode !== 'select') {
-        alert('Vui lòng chọn chế độ "Chọn ô" trước khi dùng tự động!');
-        return;
-    }
-
-    // CACHE IMAGE DATA - CHỈ TẠO 1 LẦN
-    if (!cachedImageData || cachedTimestamp < Date.now() - 1000) {
-        const canvas = document.createElement('canvas');
-        const tempCtx = canvas.getContext('2d');
-        canvas.width = originalWidthPx;
-        canvas.height = originalHeightPx;
-        tempCtx.drawImage(displayImage, 0, 0);
-        cachedImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-        cachedPixels = cachedImageData.data;
-        cachedTimestamp = Date.now();
-    }
-
-    const { totalWidthCells, totalHeightCells } = getCellCounts();
-    const { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm } = getGridPositions();
-    const pixelsPerCm = originalWidthPx / (parseFloat(widthMmInput.value) / 10);
-
-    selectedCellIndices = []; // Xóa lựa chọn cũ
-    selectedCells = 0;
-
-    // **DUYỆT TRỰC TIẾP - SIÊU NHANH**
-    for (let row = 0; row < totalHeightCells; row++) {
-        for (let col = 0; col < totalWidthCells; col++) {
-            const leftPx = (xPositions[col] / pixelPerCm) * pixelsPerCm;
-            const topPx = (yPositions[row] / pixelPerCm) * pixelsPerCm;
-            const widthPx = cellWidthsCm[col] * pixelsPerCm;
-            const heightPx = cellHeightsCm[row] * pixelsPerCm;
-
-            if (checkCellHasContentFast(
-                cachedPixels, originalWidthPx, originalHeightPx, 
-                Math.floor(leftPx), Math.floor(topPx), 
-                Math.floor(widthPx), Math.floor(heightPx)
-            )) {
-                selectedCellIndices.push([row, col, difficulty]);
-                selectedCells++;
-            }
-        }
-    }
-
-    createGrid();
-    updateResult();
-    updateColorStats();
-}
-
-// ← THAY THẾ HÀM CŨ BẰNG HÀM NÀY
-function checkCellHasContentFast(pixels, imgWidth, imgHeight, x, y, width, height) {
-    let contentPixels = 0;
-    let totalPixels = 0;
-    const step = 4; // Sample mỗi 4 pixel → NHANH GẤP 4X
-    
-    for (let dy = 0; dy < height; dy += step) {
-        for (let dx = 0; dx < width; dx += step) {
-            const py = y + dy;
-            const px = x + dx;
-            if (py >= imgHeight || px >= imgWidth) continue;
-            
-            const idx = (py * imgWidth + px) * 4;
-            totalPixels++;
-            
-            if (pixels[idx + 3] > 20) { // Alpha > 20
-                const r = pixels[idx];
-                const g = pixels[idx + 1];
-                const b = pixels[idx + 2];
-                
-                if (!(r > 240 && g > 240 && b > 240)) {
-                    contentPixels++;
-                }
-            }
-        }
-    }
-    
-    return (contentPixels / Math.max(totalPixels, 1)) > 0.08; // Giảm ngưỡng tí cho nhanh
-}
-
-// Cập nhật thống kê màu
-function updateColorStats() {
-    const stats = {
-        very_easy: 0, easy: 0, medium: 0, hard: 0, very_hard: 0
-    };
-    
-    selectedCellIndices.forEach(([row, col, difficulty]) => {
-        stats[difficulty]++;
-    });
-    
-    const statsDiv = document.getElementById('colorStats');
-    let html = '';
-    for (const [difficulty, count] of Object.entries(stats)) {
-        if (count > 0) {
-            const color = difficulty === 'very_easy' ? '🟢' :
-                         difficulty === 'easy' ? '🔵' :
-                         difficulty === 'medium' ? '🟡' :
-                         difficulty === 'hard' ? '🟠' : '🔴';
-            const label = difficulty === 'very_easy' ? 'Rất dễ' :
-                         difficulty === 'easy' ? 'Dễ' :
-                         difficulty === 'medium' ? 'Vừa' :
-                         difficulty === 'hard' ? 'Khó' : 'Rất khó';
-            html += `<span style="margin-right: 15px;">${color} ${label}: ${count} ô</span>`;
-        }
-    }
-    statsDiv.innerHTML = html || 'Chưa chọn ô nào';
-}
-
-// Hàm đổi màu ô
-function changeCellColor() {
-    const fromColor = document.getElementById('fromColor').value;
-    const toColor = document.getElementById('toColor').value;
-    
-    if (fromColor === toColor) {
-        alert('⚠️ Vui lòng chọn 2 màu khác nhau!');
-        return;
-    }
-    
-    const beforeCount = selectedCellIndices.filter(([_, __, diff]) => diff === fromColor).length;
-    if (beforeCount === 0) {
-        alert(`⚠️ Không có ô màu "${getDifficultyLabel(fromColor)}" để đổi!`);
-        return;
-    }
-    
-    selectedCellIndices = selectedCellIndices.map(([row, col, difficulty]) => 
-        difficulty === fromColor ? [row, col, toColor] : [row, col, difficulty]
-    );
-    
-    createGrid();
-    updateResult();
-    updateColorStats();
-}
-
-// Hàm chọn tất cả ô của 1 màu
-// ĐỔI TẤT CẢ MÀU - GIỮ NGUYÊN SỐ Ô!
-function changeAllColor() {
-    if (selectedCells === 0) {
-        alert('⚠️ Chưa chọn ô nào để đổi màu!');
-        return;
-    }
-    
-    const newColor = document.getElementById('toColor').value;
-    
-    const beforeCount = selectedCells;
-    
-    // CHỈ ĐỔI MÀU - KHÔNG XÓA Ô NÀO!
-    selectedCellIndices = selectedCellIndices.map(([row, col, _]) => 
-        [row, col, newColor]  // Giữ nguyên vị trí, đổi màu
-    );
-    
-    createGrid();
-    updateResult();
-    updateColorStats();
-}
-
-// Hàm hỗ trợ lấy tên màu
-function getDifficultyLabel(difficulty) {
-    const labels = {
-        very_easy: 'Rất dễ',
-        easy: 'Dễ', 
-        medium: 'Vừa',
-        hard: 'Khó',
-        very_hard: 'Rất khó'
-    };
-    return labels[difficulty] || difficulty;
-}
-
-// Bắt đầu vẽ
-function startDrawRegion(e) {
-    if (!isDrawingRegion) return;
-    isDrawing = true;
-    drawPoints = [];
-    const pos = getPositionFromEvent(e);
-    drawPoints.push(pos);
-
-    // Đảm bảo canvas đúng size
-    if (drawCanvas.width !== gridCanvas.width || drawCanvas.height !== gridCanvas.height) {
-        drawCanvas.width = gridCanvas.width;
-        drawCanvas.height = gridCanvas.height;
-    }
-
-    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    drawCtx.beginPath();
-    drawCtx.moveTo(pos.x, pos.y);
-    drawCtx.strokeStyle = '#00aaff';
-    drawCtx.lineWidth = 4;
-    drawCtx.lineCap = 'round';
-    drawCtx.lineJoin = 'round';
-}
-
-function moveDrawRegion(e) {
-    if (!isDrawingRegion || !isDrawing) return;
-    const pos = getPositionFromEvent(e);
-    drawPoints.push(pos);
-
-    drawCtx.lineTo(pos.x, pos.y);
-    drawCtx.stroke();
-}
-
-function endDrawRegion(e) {
-    if (!isDrawingRegion || !isDrawing) return;
-    isDrawing = false;
-
-    if (drawPoints.length > 8) {
-        const first = drawPoints[0];
-        const last = drawPoints[drawPoints.length - 1];
-        const dist = Math.hypot(first.x - last.x, first.y - last.y);
-
-        if (dist < 50) {
-            // Đóng vòng và tô màu nhẹ
-            drawCtx.lineTo(first.x, first.y);
-            drawCtx.closePath();
-            drawCtx.stroke();
-            drawCtx.fillStyle = 'rgba(0, 170, 255, 0.2)';
-            drawCtx.fill();
-        }
-    }
-}
-
-// Xóa vùng đang vẽ
-function clearDrawnRegion() {
-    drawPoints = [];
-    isDrawing = false;
-    if (drawCtx) {
-        drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    }
-}
-
-// Kiểm tra điểm có nằm trong polygon không (ray-casting)
-function isPointInPolygon(point, polygon) {
-    let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-        const xi = polygon[i].x, yi = polygon[i].y;
-        const xj = polygon[j].x, yj = polygon[j].y;
-        
-        const intersect = ((yi > point.y) !== (yj > point.y)) &&
-            (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-    }
-    return inside;
-}
-
-// Xác nhận vùng → chọn tất cả ô nằm bên trong
-function confirmDrawnRegion() {
-    if (drawPoints.length < 10) {
-        alert('Vùng vẽ quá nhỏ hoặc chưa vẽ! Hãy vẽ một vòng kín quanh vùng cần chọn.');
-        return;
-    }
-
-    const difficulty = Array.from(document.getElementsByName('difficulty'))
-        .find(input => input.checked)?.value || 'very_easy';
-
-    const { totalWidthCells, totalHeightCells } = getCellCounts();
-    const { xPositions, yPositions, cellWidthsCm, cellHeightsCm, pixelPerCm } = getGridPositions();
-
-    let added = 0;
-
-    for (let row = 0; row < totalHeightCells; row++) {
-        for (let col = 0; col < totalWidthCells; col++) {
-            // Lấy tâm của ô
-            const centerX = xPositions[col] + (cellWidthsCm[col] * pixelPerCm) / 2;
-            const centerY = yPositions[row] + (cellHeightsCm[row] * pixelPerCm) / 2;
-
-            if (isPointInPolygon({ x: centerX, y: centerY }, drawPoints)) {
-                // Chỉ thêm nếu chưa có
-                if (!selectedCellIndices.some(([r, c]) => r === row && c === col)) {
-                    selectedCellIndices.push([row, col, difficulty]);
-                    selectedCells++;
-                    added++;
-                } else {
-                    // Cập nhật độ khó nếu đã tồn tại
-                    selectedCellIndices = selectedCellIndices.map(item =>
-                        item[0] === row && item[1] === col ? [row, col, difficulty] : item
-                    );
-                }
-            }
-        }
-    }
-
-    createGrid();
-    updateResult();
-    updateColorStats();
-    clearDrawnRegion();
-
-    alert(`Đã chọn thêm ${added} ô nằm trong vùng vẽ!`);
-}
-// Sự kiện vẽ vùng
-drawCanvas.addEventListener('mousedown', startDrawRegion);
-drawCanvas.addEventListener('mousemove', moveDrawRegion);
-drawCanvas.addEventListener('mouseup', endDrawRegion);
-drawCanvas.addEventListener('mouseleave', endDrawRegion);
-
-drawCanvas.addEventListener('touchstart', startDrawRegion, { passive: false });
-drawCanvas.addEventListener('touchmove', moveDrawRegion, { passive: false });
-drawCanvas.addEventListener('touchend', endDrawRegion, { passive: false });
-    </script>
+      </div>
+
+      <div class="difficulty-row equal-chips">
+        <span class="diff-chip diff-green active" data-diff="very-easy">Rất dễ</span>
+        <span class="diff-chip diff-blue" data-diff="easy">Dễ</span>
+        <span class="diff-chip diff-yellow" data-diff="medium">Trung bình</span>
+        <span class="diff-chip diff-orange" data-diff="hard">Khó</span>
+        <span class="diff-chip diff-red" data-diff="very-hard">Rất khó</span>
+      </div>
+
+      <div class="mode-row centered-modes">
+        <label class="radio-label">
+          <input type="radio" name="select-mode" value="mouse" checked>
+          🖱️ Chuột
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="select-mode" value="drag">
+          ⬚ Kéo khung
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="select-mode" value="draw">
+          ✏️ Vẽ vùng
+        </label>
+        <button type="button" class="btn-sm btn-auto" id="btn-auto-select">
+          🤖 Tự động chọn
+        </button>
+      </div>
+    </section>
+
+    <!-- ========== Xem vùng ========== -->
+    <section class="panel" id="panel-color">
+      <div class="scale-section" style="margin:0 0 10px">
+        <div class="scale-slider-wrap">
+          <span class="scale-min"></span>
+          <input type="range" id="scale-slider" min="0" max="100" value="50">
+          <span class="scale-max"></span>
+        </div>
+      </div>
+
+      <div class="selected-view-title" id="selected-view-title">
+        Vùng đã chọn (Lưới: 0 ô)
+      </div>
+
+      <div class="preview-box" id="preview-box">
+        <div class="preview-placeholder">Chưa có vùng được chọn</div>
+      </div>
+
+      <div class="action-row">
+        <button type="button" class="btn btn-primary" id="btn-confirm">Xác nhận</button>
+        <button type="button" class="btn btn-danger" id="btn-delete">Xóa toàn bộ</button>
+      </div>
+
+      <div class="color-row" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;align-items:start">
+        <div class="color-group">
+          <label>Từ màu</label>
+          <div class="color-swatch-row" id="from-color-row">
+            <button type="button" class="color-pick" data-diff="very-easy" style="background:#22c55e" title="Rất dễ"></button>
+            <button type="button" class="color-pick" data-diff="easy" style="background:#3b82f6" title="Dễ"></button>
+            <button type="button" class="color-pick active" data-diff="medium" style="background:#eab308" title="Trung bình"></button>
+            <button type="button" class="color-pick" data-diff="hard" style="background:#f97316" title="Khó"></button>
+            <button type="button" class="color-pick" data-diff="very-hard" style="background:#ef4444" title="Rất khó"></button>
+          </div>
+          <input type="hidden" id="from-color" value="medium">
+        </div>
+        <div class="color-group">
+          <label>Sang màu</label>
+          <div class="color-swatch-row" id="to-color-row">
+            <button type="button" class="color-pick" data-diff="very-easy" style="background:#22c55e" title="Rất dễ"></button>
+            <button type="button" class="color-pick" data-diff="easy" style="background:#3b82f6" title="Dễ"></button>
+            <button type="button" class="color-pick" data-diff="medium" style="background:#eab308" title="Trung bình"></button>
+            <button type="button" class="color-pick" data-diff="hard" style="background:#f97316" title="Khó"></button>
+            <button type="button" class="color-pick active" data-diff="very-hard" style="background:#ef4444" title="Rất khó"></button>
+          </div>
+          <input type="hidden" id="to-color" value="very-hard">
+        </div>
+      </div>
+      <div class="color-actions full-row">
+        <button type="button" class="btn-sm btn-replace" id="btn-replace-1">Đổi 1 màu</button>
+        <button type="button" class="btn-sm btn-replace-all" id="btn-replace-all">Đổi tất cả</button>
+      </div>
+    </section>
+
+    <!-- ========== Giá ========== -->
+    <section class="panel" id="panel-pricing">
+      <div class="price-mode-row">
+        <span class="complexity-badge" id="complexity-badge">Giá: — ₫/cm²</span>
+        <div class="toggle-group" id="price-mode">
+          <button type="button" class="toggle-btn active" data-mode="auto">Tự động</button>
+          <button type="button" class="toggle-btn" data-mode="manual">Thủ công</button>
+        </div>
+        <input type="number" class="input-field" id="manual-price" placeholder="₫/cm²" min="0" style="max-width:120px;display:none">
+      </div>
+
+      <div class="total-area" id="total-area">
+        Tổng diện tích: 0.00 cm² (0 ô)
+      </div>
+
+      <div class="price-detail" id="price-detail">
+        <span style="color:#94a3b8">Chưa chọn vùng nào</span>
+      </div>
+
+      <div class="total-cost">
+        <div class="label">TỔNG TIỀN (VND):</div>
+        <div class="amount" id="total-cost">0 ₫</div>
+      </div>
+
+      <div class="conversions" id="conversions">
+        ≈ $0.00 USD &nbsp;·&nbsp; ≈ €0.00 EUR
+      </div>
+
+      <div class="exchange-rate" id="exchange-rate">
+        Tỷ giá (USD): — ₫ | (EUR): — ₫
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Scripts – thứ tự quan trọng, không dùng type=module để chạy được file:// -->
+  <script src="js/image-editor.js"></script>
+  <script src="js/pricing.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
+
