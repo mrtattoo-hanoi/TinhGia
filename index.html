@@ -603,20 +603,25 @@
     }
     .dim-input-wrap {
       display: flex;
-      align-items: center;
-      gap: 6px;
+      position: relative;   /* để icon neo theo khung này */
     }
     .dim-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1;
+      pointer-events: none; /* click xuyên qua, focus vào input */
+      width: auto;
       font-size: 16px;
       color: var(--text-muted);
-      flex-shrink: 0;
-      width: 22px;
-      text-align: center;
     }
     .dim-input-wrap .input-field,
     .dim-input-wrap .select-field {
       flex: 1;
       min-width: 0;
+	  width: 100%;
+      padding-left: 32px;   /* chừa chỗ cho icon bên trái */
     }
     .brush-size-group {
       display: flex;
@@ -707,6 +712,33 @@
       margin: 4px 0;
       line-height: 1.4;
     }
+
+    .mode-emoji {
+      font-size: 18px;
+      line-height: 1;
+      display: block;
+    }
+    .mode-tool-row .tool-btn {
+      min-height: 56px;
+    }
+    .btn-auto-select {
+      background: #15803d !important;
+      border-color: #15803d !important;
+      color: #fff !important;
+    }
+    .btn-auto-select:hover {
+      background: #166534 !important;
+      border-color: #166534 !important;
+      color: #fff !important;
+    }
+    .btn-auto-select .mode-emoji {
+      filter: none;
+    }
+    .mode-btn.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -787,21 +819,22 @@
         <span class="diff-chip diff-red" data-diff="very-hard">Rất khó</span>
       </div>
 
-      <div class="mode-row centered-modes">
-        <label class="radio-label">
-          <input type="radio" name="select-mode" value="mouse" checked>
-          🖱️ Chuột
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="select-mode" value="drag">
-          ⬚ Kéo khung
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="select-mode" value="draw">
-          ✏️ Vẽ vùng
-        </label>
-        <button type="button" class="btn-sm btn-auto" id="btn-auto-select">
-          🤖 Tự động chọn
+      <div class="tool-row mode-tool-row" style="grid-template-columns: repeat(4, 1fr); margin-top: 4px;">
+        <button type="button" class="tool-btn mode-btn active" data-mode="mouse">
+          <span class="mode-emoji">🖱️</span>
+          Chuột
+        </button>
+        <button type="button" class="tool-btn mode-btn" data-mode="drag">
+          <span class="mode-emoji">⬚</span>
+          Kéo khung
+        </button>
+        <button type="button" class="tool-btn mode-btn" data-mode="draw">
+          <span class="mode-emoji">✏️</span>
+          Vẽ vùng
+        </button>
+        <button type="button" class="tool-btn btn-auto-select" id="btn-auto-select">
+          <span class="mode-emoji">🤖</span>
+          Tự động chọn
         </button>
       </div>
     </section>
@@ -826,7 +859,7 @@
 
       <div class="action-row">
         <button type="button" class="btn btn-primary" id="btn-confirm">Xác nhận</button>
-        <button type="button" class="btn btn-danger" id="btn-delete">Xóa toàn bộ</button>
+        <button type="button" class="btn btn-danger" id="btn-delete">Xóa tất cả</button>
       </div>
 
       <div class="color-row" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;align-items:start">
