@@ -603,25 +603,40 @@
     }
     .dim-input-wrap {
       display: flex;
-      position: relative;   /* để icon neo theo khung này */
+      align-items: center;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .dim-input-wrap:focus-within {
+      border-color: var(--primary);
+      background: #fff;
     }
     .dim-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 1;
-      pointer-events: none; /* click xuyên qua, focus vào input */
-      width: auto;
-      font-size: 16px;
+      font-size: 15px;
       color: var(--text-muted);
+      flex-shrink: 0;
+      width: 32px;
+      text-align: center;
+      line-height: 1;
+      user-select: none;
     }
     .dim-input-wrap .input-field,
     .dim-input-wrap .select-field {
       flex: 1;
       min-width: 0;
-	  width: 100%;
-      padding-left: 32px;   /* chừa chỗ cho icon bên trái */
+      border: none !important;
+      background: transparent !important;
+      border-radius: 0;
+      padding-left: 0;
+    }
+    .dim-input-wrap .input-field:focus,
+    .dim-input-wrap .select-field:focus {
+      outline: none;
+      box-shadow: none;
     }
     .brush-size-group {
       display: flex;
@@ -718,26 +733,48 @@
       line-height: 1;
       display: block;
     }
-    .mode-tool-row .tool-btn {
-      min-height: 56px;
-    }
+    /* mode-btn: giống tool-btn nhưng class riêng (tránh đụng trên mobile) */
+    .mode-btn,
     .btn-auto-select {
-      background: #15803d !important;
-      border-color: #15803d !important;
-      color: #fff !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 4px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f8fafc;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      min-height: 56px;
+      width: 100%;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
-    .btn-auto-select:hover {
-      background: #166534 !important;
-      border-color: #166534 !important;
-      color: #fff !important;
-    }
-    .btn-auto-select .mode-emoji {
-      filter: none;
+    .mode-btn:hover {
+      background: #e2e8f0;
     }
     .mode-btn.active {
       border-color: var(--primary);
       background: #eff6ff;
       color: var(--primary);
+    }
+    .btn-auto-select {
+      background: #15803d;
+      border-color: #15803d;
+      color: #fff;
+    }
+    .btn-auto-select:hover {
+      background: #166534;
+      border-color: #166534;
+      color: #fff;
+    }
+    .tool-btn {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
   </style>
 </head>
@@ -800,7 +837,7 @@
           Cắt ảnh
         </button>
         <div class="option-group brush-size-group">
-          <span class="brush-label">🖌️ Chọn cỡ bút</span>
+          <span class="brush-label">🖌️ Cỡ chọn</span>
           <select class="select-field" id="selection-size">
             <option value="1" selected>1×1</option>
             <option value="2">2×2</option>
@@ -820,21 +857,21 @@
       </div>
 
       <div class="tool-row mode-tool-row" style="grid-template-columns: repeat(4, 1fr); margin-top: 4px;">
-        <button type="button" class="tool-btn mode-btn active" data-mode="mouse">
+        <button type="button" class="mode-btn active" data-mode="mouse">
           <span class="mode-emoji">🖱️</span>
           Chuột
         </button>
-        <button type="button" class="tool-btn mode-btn" data-mode="drag">
+        <button type="button" class="mode-btn" data-mode="drag">
           <span class="mode-emoji">⬚</span>
           Kéo khung
         </button>
-        <button type="button" class="tool-btn mode-btn" data-mode="draw">
+        <button type="button" class="mode-btn" data-mode="draw">
           <span class="mode-emoji">✏️</span>
           Vẽ vùng
         </button>
-        <button type="button" class="tool-btn btn-auto-select" id="btn-auto-select">
+        <button type="button" class="btn-auto-select" id="btn-auto-select">
           <span class="mode-emoji">🤖</span>
-          Tự động chọn
+          Tự chọn
         </button>
       </div>
     </section>
@@ -843,9 +880,9 @@
     <section class="panel" id="panel-color">
       <div class="scale-section" style="margin:0 0 10px">
         <div class="scale-slider-wrap">
-          <span class="scale-min"></span>
+          <span class="scale-min">nhỏ</span>
           <input type="range" id="scale-slider" min="0" max="100" value="50">
-          <span class="scale-max"></span>
+          <span class="scale-max">lớn</span>
         </div>
       </div>
 
@@ -859,7 +896,7 @@
 
       <div class="action-row">
         <button type="button" class="btn btn-primary" id="btn-confirm">Xác nhận</button>
-        <button type="button" class="btn btn-danger" id="btn-delete">Xóa tất cả</button>
+        <button type="button" class="btn btn-danger" id="btn-delete">Xóa vùng</button>
       </div>
 
       <div class="color-row" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;align-items:start">
