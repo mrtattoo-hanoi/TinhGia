@@ -407,7 +407,7 @@
     .preview-box {
       width: 300px;
       max-width: 100%;
-      margin: 0 auto 14px;
+      margin: 10px auto 14px;
       background: #f1f5f9;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -849,11 +849,11 @@
       </div>
 
       <div class="difficulty-row equal-chips">
-        <span class="diff-chip diff-green active" data-diff="very-easy">Rất dễ</span>
-        <span class="diff-chip diff-blue" data-diff="easy">Dễ</span>
-        <span class="diff-chip diff-yellow" data-diff="medium">Trung bình</span>
-        <span class="diff-chip diff-orange" data-diff="hard">Khó</span>
-        <span class="diff-chip diff-red" data-diff="very-hard">Rất khó</span>
+        <span class="diff-chip diff-green active" data-diff="very-easy"></span>
+        <span class="diff-chip diff-blue" data-diff="easy"></span>
+        <span class="diff-chip diff-yellow" data-diff="medium"></span>
+        <span class="diff-chip diff-orange" data-diff="hard"></span>
+        <span class="diff-chip diff-red" data-diff="very-hard"></span>
       </div>
 
       <div class="tool-row mode-tool-row" style="grid-template-columns: repeat(4, 1fr); margin-top: 4px;">
@@ -874,32 +874,32 @@
           Tự chọn
         </button>
       </div>
-    </section>
-
-    <!-- ========== Xem vùng ========== -->
-    <section class="panel" id="panel-color">
-      <div class="scale-section" style="margin:0 0 10px">
+	  
+	  <div class="preview-box" id="preview-box">
+        <div class="preview-placeholder">Chưa có vùng được chọn</div>
+      </div>
+	  
+	  <div class="action-row">
+        <button type="button" class="btn btn-primary" id="btn-confirm">Xác nhận</button>
+        <button type="button" class="btn btn-danger" id="btn-delete">Xóa tất cả</button>
+      </div>
+	  
+	  <div class="scale-section" style="margin:20px 0 10px">
         <div class="scale-slider-wrap">
           <span class="scale-min"></span>
           <input type="range" id="scale-slider" min="0" max="100" value="50">
           <span class="scale-max"></span>
         </div>
       </div>
+    </section>
 
-      <div class="selected-view-title" id="selected-view-title">
+    <!-- ========== Xem vùng ========== -->
+    <section class="panel" id="panel-color">
+      <!-- ==========<div class="selected-view-title" id="selected-view-title">
         Vùng đã chọn (Lưới: 0 ô)
-      </div>
+      </div>========== -->
 
-      <div class="preview-box" id="preview-box">
-        <div class="preview-placeholder">Chưa có vùng được chọn</div>
-      </div>
-
-      <div class="action-row">
-        <button type="button" class="btn btn-primary" id="btn-confirm">Xác nhận</button>
-        <button type="button" class="btn btn-danger" id="btn-delete">Xóa tất cả</button>
-      </div>
-
-      <div class="color-row" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;align-items:start">
+      <div class="color-row" style="grid-template-columns:1fr 1fr;gap:12px;margin-top:5px;align-items:start">
         <div class="color-group">
           <label>Từ màu</label>
           <div class="color-swatch-row" id="from-color-row">
