@@ -27,7 +27,7 @@ class PricingEngine {
       'very-hard': 1.4,
     };
 
-    this.MIN_TOTAL_VND = 300000;
+    this.MIN_TOTAL_VND = 500000;
     this.AREA_THRESHOLD = 640;   // cm²
     this.FLAT_PRICE_GREEN = 15000; // ₫/cm² khi S > 640
 

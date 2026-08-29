@@ -353,7 +353,7 @@ class App {
     if (this.dom.complexityBadge) {
       var badge = 'Giá: ' + (result.priceGreen || 0).toLocaleString('vi-VN') + ' ₫/cm²';
       if (result.isFlatRate) badge += ' (cố định >640cm²)';
-      if (result.appliedMin) badge += ' · tối thiểu 300k';
+      if (result.appliedMin) badge += ' · tối thiểu 500k';
       this.dom.complexityBadge.textContent = badge;
     }
 
